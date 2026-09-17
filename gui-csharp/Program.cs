@@ -155,19 +155,26 @@ static class Program
 
     private static bool ActivateExistingInstance()
     {
-        // 1. Primary: Named Pipe IPC (Desktop-scoped, 100% reliable)
+        // 1. Primary: Named Pipe IPC with Synchronous UI ACK Handshake
         try
         {
-            using var client = new System.IO.Pipes.NamedPipeClientStream(".", ScopedPipeName, System.IO.Pipes.PipeDirection.Out);
+            using var client = new System.IO.Pipes.NamedPipeClientStream(".", ScopedPipeName, System.IO.Pipes.PipeDirection.InOut);
             client.Connect(350);
-            client.WriteByte(1);
+            client.WriteByte(0x01);
             client.Flush();
-            Log("Activated existing instance via NamedPipe.");
-            return true;
+
+            client.ReadTimeout = 500;
+            int ack = client.ReadByte();
+            if (ack == 0x02)
+            {
+                Log("Activated existing instance via NamedPipe (UI thread ACK verified).");
+                return true;
+            }
+            Log($"Existing instance responded with invalid ACK: {ack}");
         }
         catch (Exception exPipe)
         {
-            Log($"NamedPipe wake error: {exPipe.Message}");
+            Log($"NamedPipe wake/handshake error: {exPipe.Message}");
         }
 
         // 2. Secondary: EventWaitHandle (Desktop-scoped kernel object)

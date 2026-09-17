@@ -91,35 +91,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let arguments = CliArguments::parse();
 
-    if arguments.mcp {
-        return godkiller_zero::proxy::McpServer::run_stdio_loop().map_err(|e| e.into());
-    }
-    if let Some(target_dir_opt) = arguments.install_hook {
-        return run_install_hook_command(target_dir_opt);
-    }
-    if let Some(target_path_opt) = arguments.gate {
-        return run_gate_command(target_path_opt, &arguments.discipline);
-    }
-    if arguments.hook {
-        return run_hook_command(&arguments.discipline);
-    }
-    if arguments.unhook {
-        return run_unhook_command();
-    }
-    if let Some(raw_prompt_text) = arguments.purify {
-        return run_purify_command(raw_prompt_text, &arguments.discipline);
-    }
-    if let Some(target_dir_opt) = arguments.repo_map {
-        return run_repo_map_command(target_dir_opt);
-    }
-    if let Some(cmd_args) = arguments.run {
-        return run_terminal_command(&cmd_args);
-    }
-    if let Some(raw_text) = arguments.prune {
-        return run_prune_command(&raw_text);
+    if let Some(cmd_result) = dispatch_cli_command(&arguments) {
+        return cmd_result;
     }
 
     run_server_mode(&arguments).await
+}
+
+fn dispatch_cli_command(
+    arguments: &CliArguments,
+) -> Option<Result<(), Box<dyn std::error::Error>>> {
+    if arguments.mcp {
+        return Some(godkiller_zero::proxy::McpServer::run_stdio_loop().map_err(|e| e.into()));
+    }
+    if let Some(target_dir_opt) = &arguments.install_hook {
+        return Some(run_install_hook_command(target_dir_opt.clone()));
+    }
+    if let Some(target_path_opt) = &arguments.gate {
+        return Some(run_gate_command(target_path_opt.clone(), &arguments.discipline));
+    }
+    dispatch_secondary_commands(arguments)
+}
+
+fn dispatch_secondary_commands(
+    arguments: &CliArguments,
+) -> Option<Result<(), Box<dyn std::error::Error>>> {
+    if arguments.hook {
+        return Some(run_hook_command(&arguments.discipline));
+    }
+    if arguments.unhook {
+        return Some(run_unhook_command());
+    }
+    if let Some(raw_prompt_text) = &arguments.purify {
+        return Some(run_purify_command(raw_prompt_text.clone(), &arguments.discipline));
+    }
+    if let Some(target_dir_opt) = &arguments.repo_map {
+        return Some(run_repo_map_command(target_dir_opt.clone()));
+    }
+    if let Some(cmd_args) = &arguments.run {
+        return Some(run_terminal_command(cmd_args));
+    }
+    arguments.prune.as_ref().map(|raw_text| run_prune_command(raw_text))
 }
 
 fn run_repo_map_command(
@@ -369,66 +381,59 @@ async fn run_server_mode(
     }
 
     if let Err(err) = proxy_server.run_loopback_listener().await {
-        #[cfg(target_os = "windows")]
-        launch_desktop_card_window(arguments.port);
+        tracing::error!("Proxy loopback listener terminated with error: {}", err);
         return Err(err);
     }
     Ok(())
 }
 
 #[cfg(target_os = "windows")]
-fn setup_system_tray(bind_port: u16) -> Option<tray_item::TrayItem> {
+fn load_custom_ico_from_path(ico_path: &std::path::Path) -> Option<isize> {
     use std::os::windows::ffi::OsStrExt;
-    use tray_item::{IconSource, TrayItem};
-    use windows_sys::Win32::UI::WindowsAndMessaging::{
-        LoadIconW, LoadImageW, IDI_APPLICATION, IDI_SHIELD, IMAGE_ICON, LR_LOADFROMFILE,
-    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{LoadImageW, IMAGE_ICON, LR_LOADFROMFILE};
+    if !ico_path.exists() {
+        return None;
+    }
+    let mut wide_path: Vec<u16> = ico_path.as_os_str().encode_wide().collect();
+    wide_path.push(0);
+    let loaded = unsafe { LoadImageW(0, wide_path.as_ptr(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE) };
+    if loaded != 0 {
+        Some(loaded)
+    } else {
+        None
+    }
+}
 
-    let mut application_icon = 0;
+#[cfg(target_os = "windows")]
+fn find_custom_ico_handle() -> Option<isize> {
+    let current_exe = std::env::current_exe().ok()?;
+    let parent_dir = current_exe.parent()?;
+    let candidates = [
+        parent_dir.join("app.ico"),
+        parent_dir.join("publish").join("app.ico"),
+        std::path::PathBuf::from("app.ico"),
+    ];
+    candidates.iter().find_map(|p| load_custom_ico_from_path(p))
+}
 
-    if let Ok(current_exe) = std::env::current_exe() {
-        if let Some(parent_dir) = current_exe.parent() {
-            let ico_candidates = [
-                parent_dir.join("app.ico"),
-                parent_dir.join("publish").join("app.ico"),
-                std::path::PathBuf::from("app.ico"),
-            ];
-            for ico_path in &ico_candidates {
-                if ico_path.exists() {
-                    let mut wide_path: Vec<u16> = ico_path.as_os_str().encode_wide().collect();
-                    wide_path.push(0);
-                    let loaded_hicon = unsafe {
-                        LoadImageW(
-                            0,
-                            wide_path.as_ptr(),
-                            IMAGE_ICON,
-                            32,
-                            32,
-                            LR_LOADFROMFILE,
-                        )
-                    };
-                    if loaded_hicon != 0 {
-                        application_icon = loaded_hicon;
-                        break;
-                    }
-                }
-            }
+#[cfg(target_os = "windows")]
+fn resolve_fallback_shield_icon() -> isize {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{LoadIconW, IDI_APPLICATION, IDI_SHIELD};
+    unsafe {
+        let shield = LoadIconW(0, IDI_SHIELD);
+        if shield != 0 {
+            shield
+        } else {
+            LoadIconW(0, IDI_APPLICATION)
         }
     }
+}
 
-    if application_icon == 0 {
-        application_icon = unsafe {
-            let security_shield_icon = LoadIconW(0, IDI_SHIELD);
-            if security_shield_icon == 0 {
-                LoadIconW(0, IDI_APPLICATION)
-            } else {
-                security_shield_icon
-            }
-        };
-    }
-
-    let mut system_tray =
-        TrayItem::new("GODKILLER ZERO", IconSource::RawIcon(application_icon)).ok()?;
+#[cfg(target_os = "windows")]
+fn setup_system_tray(bind_port: u16) -> Option<tray_item::TrayItem> {
+    use tray_item::{IconSource, TrayItem};
+    let app_icon = find_custom_ico_handle().unwrap_or_else(resolve_fallback_shield_icon);
+    let mut system_tray = TrayItem::new("GODKILLER ZERO", IconSource::RawIcon(app_icon)).ok()?;
     let _ = system_tray.add_label("GODKILLER ZERO (v1.0.0)");
     let _ = system_tray.add_menu_item("Open Controller", move || {
         launch_desktop_card_window(bind_port);
@@ -436,7 +441,6 @@ fn setup_system_tray(bind_port: u16) -> Option<tray_item::TrayItem> {
     let _ = system_tray.add_menu_item("Quit", move || {
         std::process::exit(0);
     });
-
     Some(system_tray)
 }
 

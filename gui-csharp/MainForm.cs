@@ -800,7 +800,7 @@ public class MainForm : Form
                 {
                     using var server = new System.IO.Pipes.NamedPipeServerStream(
                         Program.ScopedPipeName,
-                        System.IO.Pipes.PipeDirection.In,
+                        System.IO.Pipes.PipeDirection.InOut,
                         1,
                         System.IO.Pipes.PipeTransmissionMode.Byte,
                         System.IO.Pipes.PipeOptions.Asynchronous);
@@ -809,9 +809,17 @@ public class MainForm : Form
                     int b = server.ReadByte();
                     if (b != -1 && !IsDisposed)
                     {
+                        var tcs = new TaskCompletionSource<bool>();
                         try 
                         { 
-                            BeginInvoke(new Action(ShowAndActivate)); 
+                            BeginInvoke(new Action(() =>
+                            {
+                                ShowAndActivate();
+                                tcs.TrySetResult(true);
+                            }));
+                            await Task.WhenAny(tcs.Task, Task.Delay(400, token));
+                            server.WriteByte(0x02);
+                            server.Flush();
                         } 
                         catch (Exception exPipeShow)
                         {
