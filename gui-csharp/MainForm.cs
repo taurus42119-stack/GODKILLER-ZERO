@@ -39,6 +39,9 @@ public class MainForm : Form
     private readonly Label _lblScope;
     private readonly Label _lblPolarity;
     private readonly Button _btnCompile;
+    private readonly Label _lblLlmDot;
+    private readonly ToolTip _toolTip = new ToolTip();
+    private bool _isCheckingAiHealth;
 
     // Startup & Footer
     private readonly CheckBox _chkStartup;
@@ -224,15 +227,17 @@ public class MainForm : Form
             Location = new Point(8, 6),
             AutoSize = true
         };
-        var lblLlmBadge = new Label
+        _lblLlmDot = new Label
         {
-            Text = "● Local AI: qwen2.5-coder",
-            Font = Theme.FontSmall,
-            ForeColor = Theme.BorderActive,
-            Location = new Point(180, 7),
-            Size = new Size(160, 18),
-            TextAlign = ContentAlignment.MiddleRight
+            Text = "●",
+            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            ForeColor = Color.FromArgb(16, 185, 129),
+            Location = new Point(320, 6),
+            Size = new Size(18, 18),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Cursor = Cursors.Default
         };
+        _toolTip.SetToolTip(_lblLlmDot, "AI Engine: Ready");
 
         _txtCrucible = new TextBox
         {
@@ -284,7 +289,7 @@ public class MainForm : Form
         _btnCompile.FlatAppearance.BorderColor = Theme.BorderTile;
         _btnCompile.Click += BtnCompile_Click;
 
-        pnlSectionCrucible.Controls.AddRange(new Control[] { lblCrucibleTitle, lblLlmBadge, _txtCrucible, _lblScope, _lblPolarity, _btnCompile });
+        pnlSectionCrucible.Controls.AddRange(new Control[] { lblCrucibleTitle, _lblLlmDot, _txtCrucible, _lblScope, _lblPolarity, _btnCompile });
         pnlMain.Controls.Add(pnlSectionCrucible);
 
         // SECTION 4: STARTUP ROW
@@ -407,6 +412,70 @@ public class MainForm : Form
         UpdateModeTiles();
         _btnHook.Invalidate();
         _btnUnhook.Invalidate();
+
+        CheckAiHealthAsync();
+    }
+
+    private async void CheckAiHealthAsync()
+    {
+        if (_isCheckingAiHealth) return;
+        _isCheckingAiHealth = true;
+        try
+        {
+            bool ready = false;
+            try
+            {
+                using var cts = new CancellationTokenSource(800);
+                using var resp = await _httpClient.GetAsync("http://127.0.0.1:11434/api/version", cts.Token);
+                if (resp.IsSuccessStatusCode)
+                {
+                    ready = true;
+                }
+            }
+            catch (Exception exOllama)
+            {
+                System.Diagnostics.Debug.WriteLine($"Ollama health probe: {exOllama.Message}");
+            }
+
+            if (!ready)
+            {
+                try
+                {
+                    using var cts = new CancellationTokenSource(800);
+                    using var resp = await _httpClient.GetAsync("http://127.0.0.1:4242/health", cts.Token);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        ready = true;
+                    }
+                }
+                catch (Exception exDaemon)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Daemon health probe: {exDaemon.Message}");
+                }
+            }
+
+            if (!IsDisposed && _lblLlmDot != null)
+            {
+                if (ready)
+                {
+                    _lblLlmDot.ForeColor = Color.FromArgb(16, 185, 129);
+                    _toolTip.SetToolTip(_lblLlmDot, "AI Engine: Ready");
+                }
+                else
+                {
+                    _lblLlmDot.ForeColor = Color.FromArgb(239, 68, 68);
+                    _toolTip.SetToolTip(_lblLlmDot, "AI Engine: Offline / Not Ready");
+                }
+            }
+        }
+        catch (Exception exHealth)
+        {
+            System.Diagnostics.Debug.WriteLine($"CheckAiHealthAsync: {exHealth.Message}");
+        }
+        finally
+        {
+            _isCheckingAiHealth = false;
+        }
     }
 
     private void SetDiscipline(string discipline)
@@ -526,7 +595,7 @@ public class MainForm : Form
 
         _btnCompile.Enabled = false;
         _btnCompile.Text = "AI Translating...";
-        _lblScope.Text = "AI Translating (qwen2.5)...";
+        _lblScope.Text = "Compiling contract...";
         _lblScope.ForeColor = Theme.BorderActive;
 
         try
@@ -538,12 +607,17 @@ public class MainForm : Form
 
             _lblScope.Text = "Copied to clipboard (AI)";
             _lblScope.ForeColor = Color.FromArgb(34, 197, 94);
+            _lblLlmDot.ForeColor = Color.FromArgb(16, 185, 129);
+            _toolTip.SetToolTip(_lblLlmDot, "AI Engine: Ready");
         }
-        catch
+        catch (Exception exCompile)
         {
+            System.Diagnostics.Debug.WriteLine($"Compile error: {exCompile.Message}");
             Clipboard.SetText(prompt);
             _lblScope.Text = "Fallback: Copied input";
             _lblScope.ForeColor = Color.FromArgb(239, 68, 68);
+            _lblLlmDot.ForeColor = Color.FromArgb(239, 68, 68);
+            _toolTip.SetToolTip(_lblLlmDot, "AI Engine: Fallback / Error");
         }
         finally
         {

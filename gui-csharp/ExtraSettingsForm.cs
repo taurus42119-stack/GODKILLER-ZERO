@@ -73,9 +73,9 @@ public class ExtraSettingsForm : Form
         };
         _cboCadence.Items.AddRange(new object[]
         {
-            "⚡ Full Autonomy: Non-stop execution with intelligent self-healing",
-            "⚖️ Smart Balanced (Recommended): Confirms only breaking & high-impact changes",
-            "💬 Interactive Copilot: Step-by-step guidance for absolute human control"
+            "⚡ Full Autonomy: Self-healing continuous execution",
+            "⚖️ Smart Balanced: Confirms breaking changes (Recommended)",
+            "💬 Interactive Copilot: Step-by-step guidance"
         });
         _cboCadence.SelectedIndex = _options.ClarificationCadence.ToLowerInvariant() switch
         {
@@ -90,17 +90,17 @@ public class ExtraSettingsForm : Form
         var lblGroup1 = CreateHeaderLabel("✨ Visual Intelligence & Architecture Blueprints", ref top);
         panel.Controls.Add(lblGroup1);
 
-        _chkZeroSpeculation = CreateCheckBox("🎯 Zero Hallucination: Halts wild assumptions & demands clarity when ambiguous", _options.ZeroSpeculation, ref top);
-        _chkBanGeneric = CreateCheckBox("💎 Self-Documenting Code: Bans lazy variable names (data, res, req, temp)", _options.BanGeneric, ref top);
-        _chkBanJunk = CreateCheckBox("🏛️ Clean Domain Architecture: Bans sloppy junk drawers & messy helper dumps", _options.BanJunk, ref top);
-        _chkZeroFluff = CreateCheckBox("⚡ Instant Code Delivery: 100% pure code output, zero polite chitchat", _options.ZeroFluff, ref top);
+        _chkZeroSpeculation = CreateCheckBox("🎯 Zero Hallucination: Halts assumptions, demands clarity", _options.ZeroSpeculation, ref top);
+        _chkBanGeneric = CreateCheckBox("💎 Self-Documenting Code: Bans vague names (data, res, req)", _options.BanGeneric, ref top);
+        _chkBanJunk = CreateCheckBox("🏛️ Clean Architecture: Bans junk drawers & helper dumps", _options.BanJunk, ref top);
+        _chkZeroFluff = CreateCheckBox("⚡ Instant Delivery: 100% pure code, zero chitchat", _options.ZeroFluff, ref top);
 
-        _chkAsciiBlueprints = CreateCheckBox("📐 Spatial Wireframing: Generates beautiful ASCII component layouts & UI blueprints", _options.AsciiBlueprints, ref top);
+        _chkAsciiBlueprints = CreateCheckBox("📐 Spatial Wireframing: Generates ASCII UI & layout blueprints", _options.AsciiBlueprints, ref top);
         _cboAsciiCadence = CreateCadenceComboBox(_options.AsciiCadence, ref top);
         _cboAsciiCadence.Enabled = _options.AsciiBlueprints;
         _chkAsciiBlueprints.CheckedChanged += (s, e) => _cboAsciiCadence.Enabled = _chkAsciiBlueprints.Checked;
 
-        _chkMermaidDiagrams = CreateCheckBox("📊 Flowchart Generator: Auto-maps architecture & complex state transitions", _options.MermaidDiagrams, ref top);
+        _chkMermaidDiagrams = CreateCheckBox("📊 Flowchart Generator: Auto-maps flow & state transitions", _options.MermaidDiagrams, ref top);
         _cboMermaidCadence = CreateCadenceComboBox(_options.MermaidCadence, ref top);
         _cboMermaidCadence.Enabled = _options.MermaidDiagrams;
         _chkMermaidDiagrams.CheckedChanged += (s, e) => _cboMermaidCadence.Enabled = _chkMermaidDiagrams.Checked;
@@ -111,10 +111,10 @@ public class ExtraSettingsForm : Form
         var lblGroup2 = CreateHeaderLabel("🛡️ Anti-Spaghetti Armor & Quality Standards", ref top);
         panel.Controls.Add(lblGroup2);
 
-        _chkLimitSpan = CreateCheckBox("🧩 Bite-Sized Functions: Caps function lengths to guarantee readability", _options.LimitSpan, ref top);
-        _chkComplexity = CreateCheckBox("✨ Frictionless Logic: Enforces clean flow & eliminates nested if-else pyramids", _options.Complexity, ref top);
-        _chkBlastRadius = CreateCheckBox("🔍 Blast Radius Radar: Audits affected callers before making breaking edits", _options.BlastRadius, ref top);
-        _chkStackSensor = CreateCheckBox("🎯 Universal Stack Sensor: Auto-aligns with your exact frameworks & libraries", _options.StackSensor, ref top);
+        _chkLimitSpan = CreateCheckBox("🧩 Bite-Sized Functions: Caps function length for readability", _options.LimitSpan, ref top);
+        _chkComplexity = CreateCheckBox("✨ Frictionless Logic: Eliminates nested if-else pyramids", _options.Complexity, ref top);
+        _chkBlastRadius = CreateCheckBox("🔍 Blast Radius Radar: Audits callers before breaking edits", _options.BlastRadius, ref top);
+        _chkStackSensor = CreateCheckBox("🎯 Stack Sensor: Auto-aligns with active frameworks", _options.StackSensor, ref top);
 
         panel.Controls.AddRange(new Control[] { _chkLimitSpan, _chkComplexity, _chkBlastRadius, _chkStackSensor });
 
@@ -122,14 +122,14 @@ public class ExtraSettingsForm : Form
         var lblGroup3 = CreateHeaderLabel("🔒 Enterprise Bulletproofing & Production Shield", ref top);
         panel.Controls.Add(lblGroup3);
 
-        _chkNegativeBounding = CreateCheckBox("🛡️ Ghost Edit Shield: Absolute guarantee AI never alters untouched code", _options.NegativeBounding, ref top);
-        _chkCircuitBreaker = CreateCheckBox("🛑 Failure Loop Breaker: Auto-interrupts repetitive trial-and-error guessing", _options.CircuitBreaker, ref top);
-        _chkExhaustiveErrors = CreateCheckBox("🚀 Crash Immunity: Prohibits risky unwrap() & silent catch block swallows", _options.ExhaustiveErrors, ref top);
-        _chkFunctionalCore = CreateCheckBox("⚙️ Decoupled Core: Separates pure business logic from side-effects & I/O", _options.FunctionalCore, ref top);
-        _chkModernWeb = CreateCheckBox("🌐 Modern Web Standards: Uses latest official best practices & modern APIs", _options.ModernWebSources, ref top);
-        _chkPremiumUiUx = CreateCheckBox("🎨 Designer-Grade UI: Crafts smooth micro-animations, glassmorphism & gradients", _options.PremiumUiUx, ref top);
-        _chkInfiniteEvolution = CreateCheckBox("📈 Proactive Roadmap: Inspires scalable future phases & enterprise upgrades", _options.InfiniteEvolution, ref top);
-        _chkThaiPolarity = CreateCheckBox("🇹🇭 Native Thai Precision: 100% fluent understanding of 'ห้าม', 'อย่า', 'ยังไม่'", _options.ThaiPolarity, ref top);
+        _chkNegativeBounding = CreateCheckBox("🛡️ Ghost Edit Shield: Never modifies untouched code", _options.NegativeBounding, ref top);
+        _chkCircuitBreaker = CreateCheckBox("🛑 Loop Breaker: Halts repetitive trial-and-error guessing", _options.CircuitBreaker, ref top);
+        _chkExhaustiveErrors = CreateCheckBox("🚀 Crash Immunity: Bans risky unwrap() & silent catches", _options.ExhaustiveErrors, ref top);
+        _chkFunctionalCore = CreateCheckBox("⚙️ Decoupled Core: Separates pure logic from I/O & side-effects", _options.FunctionalCore, ref top);
+        _chkModernWeb = CreateCheckBox("🌐 Modern Web Standards: Latest official best practices & APIs", _options.ModernWebSources, ref top);
+        _chkPremiumUiUx = CreateCheckBox("🎨 Designer-Grade UI: Smooth animations & glassmorphism", _options.PremiumUiUx, ref top);
+        _chkInfiniteEvolution = CreateCheckBox("📈 Proactive Roadmap: Enterprise roadmap & future phases", _options.InfiniteEvolution, ref top);
+        _chkThaiPolarity = CreateCheckBox("🇹🇭 Thai Precision: Fluent negative logic ('ห้าม', 'อย่า')", _options.ThaiPolarity, ref top);
 
         panel.Controls.AddRange(new Control[] { _chkNegativeBounding, _chkCircuitBreaker, _chkExhaustiveErrors, _chkFunctionalCore, _chkModernWeb, _chkPremiumUiUx, _chkInfiniteEvolution, _chkThaiPolarity });
 
@@ -137,7 +137,7 @@ public class ExtraSettingsForm : Form
         var lblGroup4 = CreateHeaderLabel("🗺️ Codebase Radar & Context Armor", ref top);
         panel.Controls.Add(lblGroup4);
 
-        _chkRepoMap = CreateCheckBox("🌐 Deep Project Radar: Instant full-codebase awareness with zero token waste", _options.RepoMap, ref top);
+        _chkRepoMap = CreateCheckBox("🌐 Deep Project Radar: Full codebase context, zero token waste", _options.RepoMap, ref top);
         panel.Controls.Add(_chkRepoMap);
 
         // Footer Action Panel
@@ -252,8 +252,8 @@ public class ExtraSettingsForm : Form
         };
         cbo.Items.AddRange(new object[]
         {
-            "⚡ Fast: Plans Only (Converse/Q&A Exempt to save tokens)",
-            "🛡️ Normal: Always (Mandatory across Plans & Q&A)"
+            "⚡ Fast: Plans Only (Save tokens)",
+            "🛡️ Normal: Always (Plans & Chat)"
         });
         cbo.SelectedIndex = string.Equals(cadence, "normal", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         top += 30;
