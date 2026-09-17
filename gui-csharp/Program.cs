@@ -28,9 +28,20 @@ static class Program
     public const string ActivateMessageName = "GODKILLER_ZERO_ACTIVATE_WINDOW";
     public const string WakeUpEventName = "GodkillerZeroGui_ShowEvent";
 
+    public static void Log(string msg)
+    {
+        try
+        {
+            string p = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup.log");
+            System.IO.File.AppendAllText(p, $"[{DateTime.Now:HH:mm:ss.fff}] [PID {Environment.ProcessId}] {msg}\n");
+        }
+        catch { }
+    }
+
     [STAThread]
     static void Main(string[] args)
     {
+        Log($"Started with args: {string.Join(" ", args)}");
         if (args.Length > 0)
         {
             string cmd = args[0].ToLowerInvariant();
@@ -66,78 +77,106 @@ static class Program
         try
         {
             _mutex = new Mutex(true, mutexName, out isOnlyInstance);
+            Log($"Mutex acquired, isOnlyInstance={isOnlyInstance}");
         }
         catch (AbandonedMutexException)
         {
             isOnlyInstance = true;
+            Log("Mutex abandoned, taking ownership");
         }
 
         if (!isOnlyInstance)
         {
-            ActivateExistingInstance();
-            return;
+            Log("Instance exists, attempting wake...");
+            if (ActivateExistingInstance())
+            {
+                Log("Existing instance activated, exiting.");
+                return;
+            }
+
+            Log("Activation failed, purging orphaned instances...");
+            KillOrphanedInstances();
+            try
+            {
+                _mutex?.Dispose();
+                _mutex = new Mutex(true, mutexName, out isOnlyInstance);
+                Log($"Re-acquired mutex, isOnlyInstance={isOnlyInstance}");
+            }
+            catch (AbandonedMutexException)
+            {
+                isOnlyInstance = true;
+            }
         }
 
+        Log("Purging any remaining orphans...");
         KillOrphanedInstances();
 
+        Log("ApplicationConfiguration.Initialize()...");
         ApplicationConfiguration.Initialize();
+        Log("Instantiating MainForm...");
         var form = new MainForm();
+        Log("Calling Application.Run(form)...");
         Application.Run(form);
+        Log("Application.Run exited.");
 
         GC.KeepAlive(_mutex);
     }
 
     public const string PipeName = "GodkillerZero_WakePipe";
+    public const string MainWindowTitle = "GODKILLER ZORO 1.0";
 
     private static bool ActivateExistingInstance()
     {
-        // 1. Primary: Named Pipe IPC (Cross-process, 100% reliable)
+        // 1. Primary: Named Pipe IPC (Cross-desktop, 100% reliable)
         try
         {
             using var client = new System.IO.Pipes.NamedPipeClientStream(".", PipeName, System.IO.Pipes.PipeDirection.Out);
-            client.Connect(300);
+            client.Connect(350);
             client.WriteByte(1);
             client.Flush();
+            Log("Activated existing instance via NamedPipe.");
             return true;
         }
-        catch (Exception exNamedPipe)
+        catch (Exception exPipe)
         {
-            System.Diagnostics.Debug.WriteLine($"NamedPipe IPC wake error: {exNamedPipe.Message}");
+            Log($"NamedPipe wake error: {exPipe.Message}");
         }
 
-        // 2. Secondary: EventWaitHandle
+        // 2. Secondary: EventWaitHandle (Cross-desktop kernel object)
         try
         {
             using var wakeEvent = EventWaitHandle.OpenExisting(WakeUpEventName);
             if (wakeEvent.Set())
             {
+                Log("Activated existing instance via EventWaitHandle.");
                 return true;
             }
         }
-        catch (Exception exEventHandle)
+        catch (Exception exEvent)
         {
-            System.Diagnostics.Debug.WriteLine($"WakeEvent error: {exEventHandle.Message}");
+            Log($"EventWaitHandle wake error: {exEvent.Message}");
         }
 
-        // 3. Tertiary: Target window message (specific handle, not broadcast)
+        // 3. Fallback: FindWindow + WM message (same desktop only)
         try
         {
-            IntPtr hwnd = FindWindow(null, "GODKILLER ZORO 1.0");
+            IntPtr hwnd = FindWindow(null, MainWindowTitle);
             if (hwnd != IntPtr.Zero)
             {
                 uint activateMsg = RegisterWindowMessage(ActivateMessageName);
                 if (activateMsg != 0)
                 {
                     PostMessage(hwnd, activateMsg, IntPtr.Zero, IntPtr.Zero);
-                    SetForegroundWindow(hwnd);
-                    ShowWindow(hwnd, 9);
-                    return true;
                 }
+                ShowWindow(hwnd, 9);
+                SetForegroundWindow(hwnd);
+                Log("Activated existing instance via FindWindow/Win32.");
+                return true;
             }
         }
         catch (Exception exWin)
         {
-            System.Diagnostics.Debug.WriteLine($"FindWindow error: {exWin.Message}");
+            Log($"FindWindow wake error: {exWin.Message}");
         }
 
         return false;

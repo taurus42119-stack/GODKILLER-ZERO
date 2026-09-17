@@ -759,6 +759,7 @@ public class MainForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
+        Program.Log($"OnHandleCreated: Handle = 0x{Handle.ToInt64():X}");
         Theme.EnableDarkMode(Handle);
         try
         {
@@ -773,6 +774,7 @@ public class MainForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        Program.Log("OnShown called.");
         BringToFront();
         Activate();
         Task.Run(() =>
@@ -828,6 +830,9 @@ public class MainForm : Form
         }, token);
     }
 
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
     public void ShowAndActivate()
     {
         if (InvokeRequired)
@@ -850,6 +855,10 @@ public class MainForm : Form
                 WindowState = FormWindowState.Normal;
             }
             Show();
+            ShowWindow(Handle, 9);
+            SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040);
+            SetWindowPos(Handle, new IntPtr(-2), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040);
+            SetForegroundWindow(Handle);
             BringToFront();
             Activate();
         }
