@@ -435,7 +435,8 @@ GK-ZERO มีกลไก enforce 3 ระดับ:
 
 ### 1. สมการฝั่ง Input Tokens (System Context Injection)
 * **เมื่อปิด ZERO:** IDE ส่ง System Prompt สั้นๆ ตามปกติ (~800 - 1,200 tokens)
-* **เมื่อเปิด ZERO:** กฎเหล็ก Invariants ทั้ง 19 ข้อ + มาตรฐานความปลอดภัย + พิกัด Codebase Radar ถูก Hook ฝังเข้าไปใน System Prompt ตลอดเวลา ทำให้ทุกๆ 1 ข้อความที่เราคุย มี **Fixed Overhead เพิ่มขึ้นทันที ~1,800 - 2,500 tokens** เสมอ
+* **เมื่อเปิด ZERO (เดิม):** กฎเหล็กแบบเก่ายาวเหยียดและเวิ่นเว้อ มีคำซ้ำและตัวอย่างมากเกินไป ทำให้กิน Overhead สูงถึง ~1,800 - 2,500 tokens
+* **เมื่อเปิด ZERO (High-Density ปัจจุบัน):** บีบอัดกฎทั้ง 19 ข้อให้เป็น **High-Density Invariants** (ตัดเรียงความปรัชญาและตัวอย่างซ้ำซ้อน) ลด Overhead ลงเหลือเพียง **~500 - 650 tokens เท่านั้น! (ประหยัดลงทันที ~70%)**
 
 ### 2. สมการฝั่ง Output Completion Tokens (ตัวการหลักที่พุ่งกระฉูด)
 เมื่อเปิด ZERO ค่า Default จะสั่งให้ AI ทำงานระดับ "วิศวกรรมสถาปัตยกรรมระดับสูง" ซึ่งทำให้ AI พ่น Output ยาวกว่าปกติมาก:
@@ -447,14 +448,14 @@ GK-ZERO มีกลไก enforce 3 ระดับ:
 
 ### 3. ตารางเปรียบเทียบ Token ต่อรอบจริง (Round-Trip Token Math)
 
-| องค์ประกอบ Token | 🔴 ปิด ZERO (No Guardrails) | 🟢 เปิด ZERO เต็มสูบ (Default All-ON) | ⚡ ZERO โหมดประหยัด (Zero-Bloat Tuning) |
-| :--- | :---: | :---: | :---: |
-| **System Rules Context** | ~1,000 tokens | ~2,500 tokens (+1,500) | ~2,500 tokens |
-| **User Prompt + Files** | ~1,000 tokens | ~1,000 tokens | ~1,000 tokens |
-| **ASCII / Mermaid Output** | **0 tokens** | **~700 tokens** | **0 tokens** (ปิด/Plans Only) |
-| **Code Implementation** | ~600 tokens (โค้ดดิบๆ) | ~1,200 tokens (Strict + Safe) | ~800 tokens (Clean & Modular) |
-| **Proactive Roadmap Output** | **0 tokens** | **~300 tokens** | **0 tokens** (ปิด) |
-| **รวม Token ต่อ 1 รอบ** | **~2,600 tokens (~3-4%)** | **~5,700 tokens (~10-15%)** | **~4,300 tokens (~5-6%)** |
+| องค์ประกอบ Token | 🔴 ปิด ZERO (No Guardrails) | 🟢 เปิด ZERO เต็มสูบ (แบบเดิม) | 🚀 เปิด ZERO เต็มสูบ (High-Density ปัจจุบัน) | ⚡ ZERO โหมดประหยัด (Zero-Bloat Tuning) |
+| :--- | :---: | :---: | :---: | :---: |
+| **System Rules Context** | ~1,000 tokens | ~2,500 tokens (+1,500) | **~1,500 tokens (+500)** | **~1,500 tokens (+500)** |
+| **User Prompt + Files** | ~1,000 tokens | ~1,000 tokens | ~1,000 tokens | ~1,000 tokens |
+| **ASCII / Mermaid Output** | **0 tokens** | **~700 tokens** | **~700 tokens** | **0 tokens** (ปิด/Plans Only) |
+| **Code Implementation** | ~600 tokens (โค้ดดิบๆ) | ~1,200 tokens (Strict + Safe) | ~1,200 tokens (Strict + Safe) | ~800 tokens (Clean & Modular) |
+| **Proactive Roadmap Output** | **0 tokens** | **~300 tokens** | **~300 tokens** | **0 tokens** (ปิด) |
+| **รวม Token ต่อ 1 รอบ** | **~2,600 tokens (~3-4%)** | **~5,700 tokens (~10-15%)** | **~4,700 tokens (~7-8%)** | **~3,300 tokens (~4-5%)** |
 
 ---
 

@@ -204,7 +204,7 @@ fn resolve_discipline_params(discipline: &str) -> (usize, usize, bool, &'static 
 
 fn build_fluff_rule_text(zero_fluff: bool) -> &'static str {
     if zero_fluff {
-        "2. ZERO CONVERSATIONAL FLUFF (FIRST-TOKEN STRUCTURAL DETERMINISM):\n   - FIRST-TOKEN PROTOCOL: The very first token of your response MUST be the technical artifact itself (a Markdown code fence, diff block, or technical specification).\n   - ZERO PREAMBLE & ZERO EPILOGUE: Strictly FORBIDDEN from generating any opening greetings, acknowledgments, affirmative phrases, apologies, transitions, or concluding polite offers in ANY language.\n   - Deliver pure, clean engineering results directly."
+        "2. ZERO CONVERSATIONAL FLUFF (FIRST-TOKEN STRUCTURAL DETERMINISM):\n   - First token MUST be the artifact (header, diff, or code fence). Zero preamble, greetings, apologies, or conversational filler in any language. Deliver direct engineering output only."
     } else {
         "2. CONVERSATIONAL CADENCE: Concise, friendly engineering responses permitted."
     }
@@ -218,21 +218,20 @@ fn build_hygiene_rule_block(
     let mut hygiene_subrules = Vec::new();
     if rules.complexity && rules.limit_span {
         hygiene_subrules.push(format!(
-            "   - Maximum cyclomatic complexity: {} per function (procedural logic; pattern matching and flat dispatch count as 1 branch). Maximum span: {} lines (business logic only).",
+            "   - Maximum cyclomatic complexity: {} per function. Maximum span: {} lines (business logic). Exemptions: Declarative UI, DTO mappings, static config, and tests/.",
             max_complexity, max_span
         ));
     } else if rules.complexity {
-        hygiene_subrules.push(format!("   - Maximum cyclomatic complexity: {} per function (procedural logic; pattern matching and flat dispatch count as 1 branch).", max_complexity));
+        hygiene_subrules.push(format!("   - Maximum cyclomatic complexity: {} per function. Exemptions: Declarative UI, DTO mappings, static config, and tests/.", max_complexity));
     } else if rules.limit_span {
-        hygiene_subrules.push(format!("   - Maximum function span: {} lines (business logic only).", max_span));
+        hygiene_subrules.push(format!("   - Maximum function span: {} lines (business logic). Exemptions: Declarative UI, DTO mappings, static config, and tests/.", max_span));
     }
-    hygiene_subrules.push("   - STRUCTURAL EXEMPTIONS: Declarative UI (React JSX, Flutter widgets, WinForms layout trees), DTO/entity mappings, static configuration tables, and `tests/` directories are 100% EXEMPT from span and complexity limits.".to_string());
-    hygiene_subrules.push("   - GUARD CLAUSES & EARLY RETURNS: Strictly enforce Guard Clauses and early returns to maintain nesting depth <= 3.".to_string());
+    hygiene_subrules.push("   - Enforce guard clauses and early returns (nesting depth <= 3).".to_string());
     if rules.ban_generic {
-        hygiene_subrules.push("   - Strictly FORBIDDEN generic identifiers: [data, res, req, item, val, temp, obj, info, payload, result, handleData, processData, doAction] in domain entities, state variables, and return values. Standard framework parameter signatures (e.g., Express req/res) are permitted.".to_string());
+        hygiene_subrules.push("   - Strictly FORBIDDEN generic identifiers: [data, res, req, item, val, temp, obj, info, payload, result, handleData, processData, doAction] in domain models/state (framework signatures exempt).".to_string());
     }
     if rules.ban_junk {
-        hygiene_subrules.push("   - BANNED JUNK DRAWERS: Never create or append to `utils/`, `helpers/`, or `common/` directories. Co-locate helper functions within their specific domain feature module.".to_string());
+        hygiene_subrules.push("   - BANNED JUNK DRAWERS: Never create or append to utils/, helpers/, or common/ dirs. Co-locate helpers in domain feature modules.".to_string());
     }
     if hygiene_subrules.is_empty() {
         "3. ANTI-SPAGHETTI & CODE HYGIENE: Write clean, domain-anchored code.".to_string()
@@ -246,26 +245,26 @@ fn build_cadence_rule_text(rules: &InvariantRulesSelection) -> &'static str {
         return "5. SPECIFICATION POLICY: Autonomous inference permitted where context is sufficient.";
     }
     match rules.clarification_cadence.to_uppercase().as_str() {
-        "SILENT" => "5. CLARIFICATION CADENCE (SILENT AUTONOMOUS):\n   - Strictly FORBIDDEN from using interactive prompt modals (`ask_question`).\n   - Autonomously execute the recommended engineering path (Option #1). Present any trade-offs concisely in the final response.",
-        "INTERACTIVE" => "5. CLARIFICATION CADENCE (INTERACTIVE CO-PILOT):\n   - MANDATORY PAIR-PROGRAMMING: Proactively prompt user with structured choices via interactive modals (`ask_question`) before executing major architectural decisions.",
-        _ => "5. CLARIFICATION CADENCE (BALANCED SMART CONFIRMATION):\n   - Autonomously execute standard engineering tasks without modal popups.\n   - Trigger interactive prompt modals (`ask_question`) ONLY for high-blast critical forks: irreversible data deletion, breaking schema alterations, or conflicting file targets.",
+        "SILENT" => "5. CLARIFICATION CADENCE (SILENT AUTONOMOUS):\n   - FORBIDDEN interactive prompt modals (`ask_question`). Autonomously execute recommended path (Option #1); note trade-offs in response.",
+        "INTERACTIVE" => "5. CLARIFICATION CADENCE (INTERACTIVE CO-PILOT):\n   - Proactively prompt user with structured choices via `ask_question` before major architectural decisions.",
+        _ => "5. CLARIFICATION CADENCE (BALANCED SMART CONFIRMATION):\n   - Execute standard tasks autonomously. Trigger `ask_question` ONLY for high-blast irreversible actions (data loss, breaking schema changes).",
     }
 }
 
 fn build_mcp_directive_text(mcp_enforce: bool) -> &'static str {
     if mcp_enforce {
-        "6. DISK STATE VERIFICATION & MANDATORY GATEKEEPER (MCP PROTOCOL):\n   - Verify target files on disk and confirm unit tests or compiler build passes before declaring completion.\n   - MANDATORY MCP TOOL: If the MCP tool `gk_claim_done` is available, you MUST invoke it with your workspace path before declaring completion. If any violations (complexity > 7, span > 70, generic names, empty catch) are reported, you MUST self-heal and resolve them before concluding.\n   - Mock data and fixtures are strictly isolated to `tests/` or `fixtures/`. Production code must bind to typed interfaces or real data sources."
+        "6. DISK STATE VERIFICATION & MANDATORY GATEKEEPER (MCP PROTOCOL):\n   - Verify disk changes, tests, and build before completing. Isolated mock data strictly to tests/ or fixtures/.\n   - If MCP tool `gk_claim_done` is available, MUST invoke it before completion and self-heal any reported violations (complexity, span, generic names, empty catch)."
     } else {
-        "6. ATOMIC VALIDATION & ZERO-MOCK PRODUCTION:\n   - Inspect diff integrity before declaring task completion.\n   - Mock data and fixtures are strictly isolated to `tests/` or `fixtures/`."
+        "6. ATOMIC VALIDATION & ZERO-MOCK PRODUCTION:\n   - Inspect diff integrity before completion. Isolated mock data strictly to tests/ or fixtures/."
     }
 }
 
 fn build_visual_rules(rules: &InvariantRulesSelection) -> String {
     let ascii = if rules.ascii_blueprints {
         if rules.ascii_cadence.as_deref().unwrap_or("Fast").eq_ignore_ascii_case("Fast") {
-            "\n7. MANDATORY ASCII WIREFRAMES (FAST - PLANS & UI ONLY):\n   - Render ASCII component layouts and spatial wireframes ONLY when formulating implementation plans or UI designs within an isolated code fence (```text ... ```).\n   - General conversational responses, explanations, and trivial Q&A are STRICTLY EXEMPT from ASCII diagrams to conserve token budget."
+            "\n7. MANDATORY ASCII WIREFRAMES (FAST - PLANS & UI ONLY):\n   - Render spatial ASCII wireframes in fenced code blocks (```text) ONLY during plans or UI specs. General Q&A is strictly exempt."
         } else {
-            "\n7. MANDATORY ASCII BLUEPRINTS (NORMAL - GLOBAL):\n   - When formulating implementation plans, UI designs, or architectural specs, MUST render explicit ASCII diagrams and component wireframes.\n   - All ASCII diagrams, boxes, or tables MUST ALWAYS be enclosed within an isolated code fence (```text ... ```) or standard GitHub Markdown table (| col | col |); NEVER emit unfenced raw ASCII borders that collapse into single-line paragraphs."
+            "\n7. MANDATORY ASCII BLUEPRINTS (NORMAL - GLOBAL):\n   - Render explicit ASCII diagrams in fenced code blocks (```text) or markdown tables for all architectures, UI, and workflows. Never emit raw unfenced borders."
         }
     } else {
         ""
@@ -273,9 +272,9 @@ fn build_visual_rules(rules: &InvariantRulesSelection) -> String {
 
     let mermaid = if rules.mermaid_diagrams {
         if rules.mermaid_cadence.as_deref().unwrap_or("Fast").eq_ignore_ascii_case("Fast") {
-            "\n7b. MANDATORY MERMAID WORKFLOW (FAST - PLANS ONLY):\n   - When formulating implementation plans or complex architectural workflows, MUST render Mermaid diagrams (```mermaid graph LR/TD ... ```) to visualize system transitions and logic flows.\n   - General conversational Q&A and minor one-off queries are STRICTLY EXEMPT from Mermaid diagrams to conserve tokens."
+            "\n7b. MANDATORY MERMAID WORKFLOW (FAST - PLANS ONLY):\n   - Render Mermaid diagrams (```mermaid graph LR/TD) ONLY in plans/architecture specs for logic flows. General Q&A is strictly exempt."
         } else {
-            "\n7b. MANDATORY MERMAID WORKFLOW (NORMAL - GLOBAL):\n   - Every system architecture explanation, lifecycle flow, sequence, or state transition across all responses and Q&A MUST render Mermaid diagrams (```mermaid ... ```)."
+            "\n7b. MANDATORY MERMAID WORKFLOW (NORMAL - GLOBAL):\n   - Render Mermaid diagrams (```mermaid) across all responses for system architecture, state transitions, and workflows."
         }
     } else {
         ""
@@ -289,9 +288,9 @@ fn build_mutation_bounding_rule(negative_mutation_bounding: bool, thai_polarity:
         return "";
     }
     if thai_polarity {
-        "\n10. NEGATIVE MUTATION BOUNDING (GHOST EDIT SHIELD):\n    - Strictly FORBIDDEN from modifying, refactoring, or renaming any symbol, function, or file not explicitly targeted by the user prompt. Import resolution and formatting within targeted functions are permitted.\n    - When prompt contains prohibition markers (Thai: 'อย่า', 'ห้าม', 'ไม่ต้อง', 'ไม่เอา'; English: 'don\'t', 'never', 'preserve', 'do not touch'), target logic MUST remain 100% bit-for-bit unchanged."
+        "\n10. NEGATIVE MUTATION BOUNDING (GHOST EDIT SHIELD):\n    - FORBIDDEN modifying or refactoring files/symbols not explicitly targeted. Targeted formatting/imports permitted.\n    - When prompt contains prohibition markers (Thai: 'อย่า', 'ห้าม', 'ไม่ต้อง', 'ไม่เอา'; English: 'don\'t', 'never', 'preserve', 'do not touch'), target logic MUST remain 100% bit-for-bit unchanged."
     } else {
-        "\n10. NEGATIVE MUTATION BOUNDING (GHOST EDIT SHIELD):\n    - Strictly FORBIDDEN from modifying, refactoring, or renaming any symbol, function, or file not explicitly targeted by the user prompt. Import resolution and formatting within targeted functions are permitted.\n    - When prompt contains prohibition or preservation markers (e.g., 'don\'t', 'never', 'preserve', 'do not touch', or linguistic equivalents), target logic MUST remain 100% bit-for-bit unchanged."
+        "\n10. NEGATIVE MUTATION BOUNDING (GHOST EDIT SHIELD):\n    - FORBIDDEN modifying or refactoring files/symbols not explicitly targeted. Targeted formatting/imports permitted.\n    - When prompt contains prohibition or preservation markers (e.g., 'don\'t', 'never', 'preserve', 'do not touch'), target logic MUST remain 100% bit-for-bit unchanged."
     }
 }
 
@@ -300,15 +299,15 @@ fn build_circuit_breaker_rule(circuit_breaker: bool, thai_polarity: bool) -> &'s
         return "";
     }
     if thai_polarity {
-        "\n11. LINGUISTIC CIRCUIT BREAKER (FAILURE LOOP INTERRUPT):\n    - When user indicates failure recurrence (Thai: 'ยังไม่ได้', 'พังเหมือนเดิม', 'แก้ไม่หาย', 'วนลูป'; English: 'still failing', 'same error', 'didn\'t work', 'looping'), AI is strictly forbidden from guessing another fix.\n    - AI MUST halt speculation and demand exact runtime logs, compiler errors, or emit a minimal hypothesis trace diagram."
+        "\n11. LINGUISTIC CIRCUIT BREAKER (FAILURE LOOP INTERRUPT):\n    - When user indicates failure recurrence (Thai: 'ยังไม่ได้', 'พังเหมือนเดิม', 'แก้ไม่หาย', 'วนลูป'; English: 'still failing', 'same error', 'didn\'t work', 'looping'), HALT speculation. Demand exact runtime logs/errors or emit hypothesis trace."
     } else {
-        "\n11. LINGUISTIC CIRCUIT BREAKER (FAILURE LOOP INTERRUPT):\n    - When user indicates failure recurrence, stagnation, or looping across any language (e.g., 'still failing', 'same error', 'didn\'t work', 'looping'), AI is strictly forbidden from guessing another fix.\n    - AI MUST halt speculation and demand exact runtime logs, compiler errors, or emit a minimal hypothesis trace diagram."
+        "\n11. LINGUISTIC CIRCUIT BREAKER (FAILURE LOOP INTERRUPT):\n    - When user indicates failure recurrence, stagnation, or looping (e.g., 'still failing', 'same error', 'didn\'t work', 'looping'), HALT speculation. Demand exact runtime logs/errors or emit hypothesis trace."
     }
 }
 
 fn build_core_guard_rules(rules: &InvariantRulesSelection) -> String {
-    let blast = if rules.blast_radius { "\n8. BLAST RADIUS IMPACT AUDIT: When modifying functions, endpoints, or data models, verify all inbound callers and outbound downstream dependencies before applying changes." } else { "" };
-    let stack = if rules.stack_sensor { "\n9. TECH STACK AUTO-ALIGNMENT: Strictly adhere to project-detected frameworks, libraries, and compiler toolchains without hallucinating mismatched dependencies." } else { "" };
+    let blast = if rules.blast_radius { "\n8. BLAST RADIUS IMPACT AUDIT: Verify inbound callers and downstream dependencies before modifying functions, endpoints, or data models." } else { "" };
+    let stack = if rules.stack_sensor { "\n9. TECH STACK AUTO-ALIGNMENT: Strictly adhere to project frameworks, libraries, and compiler toolchains without hallucinating dependencies." } else { "" };
     let mutation_guard = build_mutation_bounding_rule(rules.negative_mutation_bounding, rules.thai_polarity);
     let circuit = build_circuit_breaker_rule(rules.circuit_breaker, rules.thai_polarity);
 
@@ -316,12 +315,12 @@ fn build_core_guard_rules(rules: &InvariantRulesSelection) -> String {
 }
 
 fn build_advanced_guidance_rules(rules: &InvariantRulesSelection) -> String {
-    let exhaustive = if rules.exhaustive_errors { "\n12. EXHAUSTIVE ERROR HANDLING & NO LAZY STUBS:\n    - FORBIDDEN unchecked unwrap(), raw expect() without context, silent catch {} / except: pass, or unhandled rejected promises.\n    - FORBIDDEN lazy stub comments (e.g., '// TODO: implement later'). Any deferred logic must declare a full typed interface and explicitly throw a domain NotImplemented error with tracking context." } else { "" };
-    let functional = if rules.functional_core { "\n13. FUNCTIONAL CORE & IMPERATIVE SHELL:\n    - Decouple pure business logic and state transitions from impure I/O (network, disk, subprocesses). Pure domain calculations must be deterministic and testable without mocks." } else { "" };
-    let modern_web = if rules.modern_web_sources { "\n14. MODERN WEB & DOCUMENTATION GUIDANCE:\n    - When conducting web research, prioritize modern official documentation, current API references, and latest GitHub releases.\n    - Avoid relying on obsolete blog tutorials or deprecated legacy patterns." } else { "" };
-    let ui_ux = if rules.premium_ui_ux { "\n15. PREMIUM UI/UX AESTHETIC MANDATE (ZERO BROWSER DEFAULTS):\n    - DESIGN TOKENS FIRST: Enforce cohesive typography (Google Fonts: Inter, Roboto, or Outfit) and curated color schemes (Sleek Dark Mode, tailored HSL).\n    - BANNED BROWSER DEFAULTS: Strictly FORBIDDEN raw browser buttons, unstyled links, basic HTML tables, and plain primary colors (#ff0000, #0000ff).\n    - INTERACTIVE MICRO-ANIMATIONS: Every interactive element (buttons, cards, tabs, inputs) MUST feature hover, active, and focus states with smooth transitions (0.15s - 0.2s). The interface must feel responsive and alive.\n    - RESPONSIVE FLUID LAYOUT: Enforce Flexbox/Grid on an 8px spacing system, structured card layering, elevation, and mobile responsiveness." } else { "" };
-    let evolution = if rules.infinite_evolution { "\n16. INFINITE EVOLUTIONARY CONTINUUM (ENTERPRISE ROADMAP ADVANCEMENT):\n    - CONTINUOUS ITERATION: Passing compilation and unit tests is a baseline milestone, NOT a stopping signal. Software evolution is an infinite continuum.\n    - CHECKPOINT & ELEVATE: Upon achieving 100% test pass and zero errors, record a Git checkpoint, then proactively benchmark against world-class enterprise standards (e.g. SAP, Oracle WMS, Stripe).\n    - AUTONOMOUS ROADMAP EXPANSION: Proactively initiate the next advancement phase (e.g. Predictive Analytics, Multi-Warehouse Routing, In-Memory Caching, WebSockets Telemetry, Audit Logs, RBAC) and formulate the execution roadmap without waiting for user prompting.\n    - HALT CONDITION: Continue iterative advancement until explicit user pause or token budget termination." } else { "" };
-    let repo_map_rule = if rules.repo_map { "\n17. CODEBASE REPO MAP RADAR:\n    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to pinpoint target symbols before reading source files. Strictly avoid dumping massive files (>150 lines) into context." } else { "" };
+    let exhaustive = if rules.exhaustive_errors { "\n12. EXHAUSTIVE ERROR HANDLING & NO LAZY STUBS:\n    - FORBIDDEN unchecked unwrap(), raw expect(), silent catch {} / except: pass, or unhandled rejected promises.\n    - FORBIDDEN lazy stubs (e.g., '// TODO: implement later'). Deferred logic must declare typed interfaces and throw explicit domain NotImplemented errors." } else { "" };
+    let functional = if rules.functional_core { "\n13. FUNCTIONAL CORE & IMPERATIVE SHELL:\n    - Decouple pure business logic and state transitions from impure I/O (disk, network). Domain logic must be deterministic and testable without mocks." } else { "" };
+    let modern_web = if rules.modern_web_sources { "\n14. MODERN WEB & DOCUMENTATION GUIDANCE:\n    - In web research, prioritize current official documentation and latest GitHub releases over obsolete blog tutorials." } else { "" };
+    let ui_ux = if rules.premium_ui_ux { "\n15. PREMIUM UI/UX AESTHETIC MANDATE (ZERO BROWSER DEFAULTS):\n    - Enforce design tokens: modern typography (Inter/Roboto/Outfit), curated HSL/dark palette, 8px grid, smooth transitions (0.15s-0.2s).\n    - Strictly FORBIDDEN raw browser buttons, unstyled tables/links, and default saturated primaries (#ff0000, #0000ff)." } else { "" };
+    let evolution = if rules.infinite_evolution { "\n16. INFINITE EVOLUTIONARY CONTINUUM (ENTERPRISE ROADMAP ADVANCEMENT):\n    - Passing tests is a milestone, NOT a stopping signal. Upon 100% pass, checkpoint Git.\n    - Autonomously formulate next phase roadmap (e.g., caching, telemetry, hardening) without waiting for prompts, until explicit user pause." } else { "" };
+    let repo_map_rule = if rules.repo_map { "\n17. CODEBASE REPO MAP RADAR:\n    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context." } else { "" };
 
     format!("{}{}{}{}{}{}", exhaustive, functional, modern_web, ui_ux, evolution, repo_map_rule)
 }
@@ -356,12 +355,9 @@ pub fn generate_custom_antigravity_rule_block(
 
     [
         GK_ZERO_MARKER_START,
-        "# GODKILLER ZERO : COGNITIVE PRE-FLIGHT INVARIANTS & ZERO-VIBE SHIELD",
+        "# GODKILLER ZERO : COGNITIVE INVARIANTS",
         &format!("Discipline: {}", discipline_kanji),
-        "Target Runtime: Google Antigravity IDE & Antigravity CLI (agy)",
-        "",
-        "You are strictly governed by the GODKILLER ZERO Invariant Protocol:",
-        "1. TARGET COORDINATES: When editing code, anchor to exact file coordinates or domain scopes.",
+        "1. TARGET COORDINATES: Anchor code edits strictly to exact file coordinates and domain scopes.",
         fluff_rule,
         &hygiene_block,
         vibe_rule,
@@ -373,9 +369,9 @@ pub fn generate_custom_antigravity_rule_block(
 
 fn build_vibe_rule_text(thai_polarity: bool) -> &'static str {
     if thai_polarity {
-        "4. ZERO VIBE-CODING TELLS (MULTILINGUAL):\n   - NEVER write redundant restatement comments that merely repeat or translate what code does in any language:\n     * Thai examples: `// ฟังก์ชันสำหรับ...`, `// เพิ่มตัวแปร`, `// คืนค่าผลลัพธ์`, `// ตรวจสอบเงื่อนไข`, `// นำเข้าโมดูล`, `// วนลูปข้อมูล`\n     * English examples: `// increment counter`, `// return result`, `// check condition`, `// import modules`, `// loop through items`\n   - Write self-documenting, clean production-grade code only."
+        "4. ZERO VIBE-CODING TELLS (MULTILINGUAL):\n   - NEVER write comments narrating code mechanics (Thai examples: `// ฟังก์ชันสำหรับ...`, `// คืนค่าผลลัพธ์`; English: `// increment counter`, `// return result`). Write clean self-documenting code only."
     } else {
-        "4. ZERO VIBE-CODING TELLS (UNIVERSAL HYGIENE):\n   - NEVER write redundant restatement comments that merely narrate or translate what code mechanics do in ANY language (e.g., '// increment counter', '// return result', '// loop through items').\n   - Write self-documenting, clean production-grade code only."
+        "4. ZERO VIBE-CODING TELLS (UNIVERSAL HYGIENE):\n   - NEVER write comments narrating code mechanics (e.g., `// increment counter`, `// return result`). Write clean self-documenting code only."
     }
 }
 

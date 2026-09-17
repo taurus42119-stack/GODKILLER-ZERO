@@ -920,19 +920,14 @@ public static class HookEngine
 
         var sb = new StringBuilder();
         sb.AppendLine(MarkerStart);
-        sb.AppendLine("# GODKILLER ZERO : COGNITIVE PRE-FLIGHT INVARIANTS & ZERO-VIBE SHIELD");
+        sb.AppendLine("# GODKILLER ZERO : COGNITIVE INVARIANTS");
         sb.AppendLine($"Discipline: {label}");
-        sb.AppendLine("Target Runtime: Google Antigravity IDE & Antigravity CLI (agy)");
-        sb.AppendLine();
-        sb.AppendLine("You are strictly governed by the GODKILLER ZERO Invariant Protocol:");
-        sb.AppendLine("1. TARGET COORDINATES: When editing code, anchor to exact file coordinates or domain scopes.");
+        sb.AppendLine("1. TARGET COORDINATES: Anchor code edits strictly to exact file coordinates and domain scopes.");
 
         if (options.ZeroFluff)
         {
             sb.AppendLine("2. ZERO CONVERSATIONAL FLUFF (FIRST-TOKEN STRUCTURAL DETERMINISM):");
-            sb.AppendLine("   - FIRST-TOKEN PROTOCOL: The very first token of your response MUST be the technical artifact itself (a Markdown code fence, diff block, or technical specification).");
-            sb.AppendLine("   - ZERO PREAMBLE & ZERO EPILOGUE: Strictly FORBIDDEN from generating any opening greetings, acknowledgments, affirmative phrases, apologies, transitions, or concluding polite offers in ANY language.");
-            sb.AppendLine("   - Deliver pure, clean engineering results directly.");
+            sb.AppendLine("   - First token MUST be the artifact (header, diff, or code fence). Zero preamble, greetings, apologies, or conversational filler in any language. Deliver direct engineering output only.");
         }
         else
         {
@@ -942,41 +937,36 @@ public static class HookEngine
         sb.AppendLine("3. ANTI-SPAGHETTI & CODE HYGIENE (WITH STRUCTURAL IMMUNITY):");
         if (options.Complexity && options.LimitSpan)
         {
-            sb.AppendLine($"   - Maximum cyclomatic complexity: {options.MaxComplexity} per function (procedural logic; pattern matching and flat dispatch count as 1 branch). Maximum span: {options.MaxSpan} lines (business logic only).");
+            sb.AppendLine($"   - Maximum cyclomatic complexity: {options.MaxComplexity} per function. Maximum span: {options.MaxSpan} lines (business logic). Exemptions: Declarative UI, DTO mappings, static config, and tests/.");
         }
         else if (options.Complexity)
         {
-            sb.AppendLine($"   - Maximum cyclomatic complexity: {options.MaxComplexity} per function (procedural logic; pattern matching and flat dispatch count as 1 branch).");
+            sb.AppendLine($"   - Maximum cyclomatic complexity: {options.MaxComplexity} per function. Exemptions: Declarative UI, DTO mappings, static config, and tests/.");
         }
         else if (options.LimitSpan)
         {
-            sb.AppendLine($"   - Maximum function span: {options.MaxSpan} lines (business logic only).");
+            sb.AppendLine($"   - Maximum function span: {options.MaxSpan} lines (business logic). Exemptions: Declarative UI, DTO mappings, static config, and tests/.");
         }
-        sb.AppendLine("   - STRUCTURAL EXEMPTIONS: Declarative UI (React JSX, Flutter widgets, WinForms layout trees), DTO/entity mappings, static configuration tables, and `tests/` directories are 100% EXEMPT from span and complexity limits.");
-        sb.AppendLine("   - GUARD CLAUSES & EARLY RETURNS: Strictly enforce Guard Clauses and early returns to maintain nesting depth <= 3.");
+        sb.AppendLine("   - Enforce guard clauses and early returns (nesting depth <= 3).");
 
         if (options.BanGeneric)
         {
-            sb.AppendLine("   - Strictly FORBIDDEN generic identifiers: [data, res, req, item, val, temp, obj, info, payload, result, handleData, processData, doAction] in domain entities, state variables, and return values. Standard framework parameter signatures (e.g., Express req/res) are permitted.");
+            sb.AppendLine("   - Strictly FORBIDDEN generic identifiers: [data, res, req, item, val, temp, obj, info, payload, result, handleData, processData, doAction] in domain models/state (framework signatures exempt).");
         }
         if (options.BanJunk)
         {
-            sb.AppendLine("   - BANNED JUNK DRAWERS: Never create or append to `utils/`, `helpers/`, or `common/` directories. Co-locate helper functions within their specific domain feature module.");
+            sb.AppendLine("   - BANNED JUNK DRAWERS: Never create or append to utils/, helpers/, or common/ dirs. Co-locate helpers in domain feature modules.");
         }
 
         if (options.ThaiPolarity)
         {
             sb.AppendLine("4. ZERO VIBE-CODING TELLS (MULTILINGUAL):");
-            sb.AppendLine("   - NEVER write redundant restatement comments that merely repeat or translate what code does in any language:");
-            sb.AppendLine("     * Thai examples: `// ฟังก์ชันสำหรับ...`, `// เพิ่มตัวแปร`, `// คืนค่าผลลัพธ์`, `// ตรวจสอบเงื่อนไข`, `// นำเข้าโมดูล`, `// วนลูปข้อมูล`");
-            sb.AppendLine("     * English examples: `// increment counter`, `// return result`, `// check condition`, `// import modules`, `// loop through items`");
-            sb.AppendLine("   - Write self-documenting, clean production-grade code only.");
+            sb.AppendLine("   - NEVER write comments narrating code mechanics (Thai examples: `// ฟังก์ชันสำหรับ...`, `// คืนค่าผลลัพธ์`; English: `// increment counter`, `// return result`). Write clean self-documenting code only.");
         }
         else
         {
             sb.AppendLine("4. ZERO VIBE-CODING TELLS (UNIVERSAL HYGIENE):");
-            sb.AppendLine("   - NEVER write redundant restatement comments that merely narrate or translate what code mechanics do in ANY language (e.g., `// increment counter`, `// return result`, `// loop through items`).");
-            sb.AppendLine("   - Write self-documenting, clean production-grade code only.");
+            sb.AppendLine("   - NEVER write comments narrating code mechanics (e.g., `// increment counter`, `// return result`). Write clean self-documenting code only.");
         }
 
         if (options.ZeroSpeculation)
@@ -984,19 +974,17 @@ public static class HookEngine
             if (string.Equals(options.ClarificationCadence, "Silent", StringComparison.OrdinalIgnoreCase))
             {
                 sb.AppendLine("5. CLARIFICATION CADENCE (SILENT AUTONOMOUS):");
-                sb.AppendLine("   - Strictly FORBIDDEN from using interactive prompt modals (`ask_question`).");
-                sb.AppendLine("   - Autonomously execute the recommended engineering path (Option #1). Present any trade-offs concisely in the final response.");
+                sb.AppendLine("   - FORBIDDEN interactive prompt modals (`ask_question`). Autonomously execute recommended path (Option #1); note trade-offs in response.");
             }
             else if (string.Equals(options.ClarificationCadence, "Interactive", StringComparison.OrdinalIgnoreCase))
             {
                 sb.AppendLine("5. CLARIFICATION CADENCE (INTERACTIVE CO-PILOT):");
-                sb.AppendLine("   - MANDATORY PAIR-PROGRAMMING: Proactively prompt user with structured choices via interactive modals (`ask_question`) before executing major architectural decisions.");
+                sb.AppendLine("   - Proactively prompt user with structured choices via `ask_question` before major architectural decisions.");
             }
             else
             {
                 sb.AppendLine("5. CLARIFICATION CADENCE (BALANCED SMART CONFIRMATION):");
-                sb.AppendLine("   - Autonomously execute standard engineering tasks without modal popups.");
-                sb.AppendLine("   - Trigger interactive prompt modals (`ask_question`) ONLY for high-blast critical forks: irreversible data deletion, breaking schema alterations, or conflicting file targets.");
+                sb.AppendLine("   - Execute standard tasks autonomously. Trigger `ask_question` ONLY for high-blast irreversible actions (data loss, breaking schema changes).");
             }
         }
         else
@@ -1005,23 +993,20 @@ public static class HookEngine
         }
 
         sb.AppendLine("6. DISK STATE VERIFICATION & MANDATORY GATEKEEPER (MCP PROTOCOL):");
-        sb.AppendLine("   - Verify target files on disk and confirm unit tests or compiler build passes before declaring completion.");
-        sb.AppendLine("   - MANDATORY MCP TOOL: If the MCP tool `gk_claim_done` is available, you MUST invoke it with your workspace path before declaring completion. If any violations (complexity > 7, span > 70, generic names, empty catch) are reported, you MUST self-heal and resolve them before concluding.");
-        sb.AppendLine("   - Mock data and fixtures are strictly isolated to `tests/` or `fixtures/`. Production code must bind to typed interfaces or real data sources.");
+        sb.AppendLine("   - Verify disk changes, tests, and build before completing. Isolated mock data strictly to tests/ or fixtures/.");
+        sb.AppendLine("   - If MCP tool `gk_claim_done` is available, MUST invoke it before completion and self-heal any reported violations (complexity, span, generic names, empty catch).");
 
         if (options.AsciiBlueprints)
         {
             if (string.Equals(options.AsciiCadence, "Fast", StringComparison.OrdinalIgnoreCase))
             {
                 sb.AppendLine("7. MANDATORY ASCII WIREFRAMES (FAST - PLANS & UI ONLY):");
-                sb.AppendLine("   - Render ASCII component layouts and spatial wireframes ONLY when formulating implementation plans or UI designs within an isolated code fence (```text ... ```).");
-                sb.AppendLine("   - General conversational responses, explanations, and trivial Q&A are STRICTLY EXEMPT from ASCII diagrams to conserve token budget.");
+                sb.AppendLine("   - Render spatial ASCII wireframes in fenced code blocks (```text) ONLY during plans or UI specs. General Q&A is strictly exempt.");
             }
             else
             {
                 sb.AppendLine("7. MANDATORY ASCII BLUEPRINTS (NORMAL - GLOBAL):");
-                sb.AppendLine("   - When formulating implementation plans, UI designs, or architectural specs, MUST render explicit ASCII diagrams and component wireframes.");
-                sb.AppendLine("   - All ASCII diagrams, boxes, or tables MUST ALWAYS be enclosed within an isolated code fence (```text ... ```) or standard GitHub Markdown table (| col | col |); NEVER emit unfenced raw ASCII borders that collapse into single-line paragraphs.");
+                sb.AppendLine("   - Render explicit ASCII diagrams in fenced code blocks (```text) or markdown tables for all architectures, UI, and workflows. Never emit raw unfenced borders.");
             }
         }
 
@@ -1030,37 +1015,36 @@ public static class HookEngine
             if (string.Equals(options.MermaidCadence, "Fast", StringComparison.OrdinalIgnoreCase))
             {
                 sb.AppendLine("7b. MANDATORY MERMAID WORKFLOW (FAST - PLANS ONLY):");
-                sb.AppendLine("   - When formulating implementation plans or complex architectural workflows, MUST render Mermaid diagrams (```mermaid graph LR/TD ... ```) to visualize system transitions and logic flows.");
-                sb.AppendLine("   - General conversational Q&A and minor one-off queries are STRICTLY EXEMPT from Mermaid diagrams to conserve tokens.");
+                sb.AppendLine("   - Render Mermaid diagrams (```mermaid graph LR/TD) ONLY in plans/architecture specs for logic flows. General Q&A is strictly exempt.");
             }
             else
             {
                 sb.AppendLine("7b. MANDATORY MERMAID WORKFLOW (NORMAL - GLOBAL):");
-                sb.AppendLine("   - Every system architecture explanation, lifecycle flow, sequence, or state transition across all responses and Q&A MUST render Mermaid diagrams (```mermaid ... ```).");
+                sb.AppendLine("   - Render Mermaid diagrams (```mermaid) across all responses for system architecture, state transitions, and workflows.");
             }
         }
 
         if (options.BlastRadius)
         {
-            sb.AppendLine("8. BLAST RADIUS IMPACT AUDIT: When modifying functions, endpoints, or data models, verify all inbound callers and outbound downstream dependencies before applying changes.");
+            sb.AppendLine("8. BLAST RADIUS IMPACT AUDIT: Verify inbound callers and downstream dependencies before modifying functions, endpoints, or data models.");
         }
 
         if (options.StackSensor)
         {
-            sb.AppendLine("9. TECH STACK AUTO-ALIGNMENT: Strictly adhere to project-detected frameworks, libraries, and compiler toolchains without hallucinating mismatched dependencies.");
+            sb.AppendLine("9. TECH STACK AUTO-ALIGNMENT: Strictly adhere to project frameworks, libraries, and compiler toolchains without hallucinating dependencies.");
         }
 
         if (options.NegativeBounding)
         {
             sb.AppendLine("10. NEGATIVE MUTATION BOUNDING (GHOST EDIT SHIELD):");
-            sb.AppendLine("    - Strictly FORBIDDEN from modifying, refactoring, or renaming any symbol, function, or file not explicitly targeted by the user prompt. Import resolution and formatting within targeted functions are permitted.");
+            sb.AppendLine("    - FORBIDDEN modifying or refactoring files/symbols not explicitly targeted. Targeted formatting/imports permitted.");
             if (options.ThaiPolarity)
             {
-                sb.AppendLine("    - When prompt contains prohibition markers (Thai: 'อย่า', 'ห้าม', 'ไม่ต้อง', 'ไม่เอา'; English: 'don\'t', 'never', 'preserve', 'do not touch'), target logic MUST remain 100% bit-for-bit unchanged.");
+                sb.AppendLine("    - When prompt contains prohibition markers (Thai: 'อย่า', 'ห้าม', 'ไม่ต้อง', 'ไม่เอา'; English: 'don\\'t', 'never', 'preserve', 'do not touch'), target logic MUST remain 100% bit-for-bit unchanged.");
             }
             else
             {
-                sb.AppendLine("    - When prompt contains prohibition or preservation markers (e.g., 'don\'t', 'never', 'preserve', 'do not touch', or linguistic equivalents), target logic MUST remain 100% bit-for-bit unchanged.");
+                sb.AppendLine("    - When prompt contains prohibition or preservation markers (e.g., 'don\\'t', 'never', 'preserve', 'do not touch'), target logic MUST remain 100% bit-for-bit unchanged.");
             }
         }
 
@@ -1069,57 +1053,51 @@ public static class HookEngine
             sb.AppendLine("11. LINGUISTIC CIRCUIT BREAKER (FAILURE LOOP INTERRUPT):");
             if (options.ThaiPolarity)
             {
-                sb.AppendLine("    - When user indicates failure recurrence (Thai: 'ยังไม่ได้', 'พังเหมือนเดิม', 'แก้ไม่หาย', 'วนลูป'; English: 'still failing', 'same error', 'didn\'t work', 'looping'), AI is strictly forbidden from guessing another fix.");
+                sb.AppendLine("    - When user indicates failure recurrence (Thai: 'ยังไม่ได้', 'พังเหมือนเดิม', 'แก้ไม่หาย', 'วนลูป'; English: 'still failing', 'same error', 'didn\\'t work', 'looping'), HALT speculation. Demand exact runtime logs/errors or emit hypothesis trace.");
             }
             else
             {
-                sb.AppendLine("    - When user indicates failure recurrence, stagnation, or looping across any language (e.g., 'still failing', 'same error', 'didn\'t work', 'looping'), AI is strictly forbidden from guessing another fix.");
+                sb.AppendLine("    - When user indicates failure recurrence, stagnation, or looping (e.g., 'still failing', 'same error', 'didn\\'t work', 'looping'), HALT speculation. Demand exact runtime logs/errors or emit hypothesis trace.");
             }
-            sb.AppendLine("    - AI MUST halt speculation and demand exact runtime logs, compiler errors, or emit a minimal hypothesis trace diagram.");
         }
 
         if (options.ExhaustiveErrors)
         {
             sb.AppendLine("12. EXHAUSTIVE ERROR HANDLING & NO LAZY STUBS:");
-            sb.AppendLine("    - FORBIDDEN unchecked unwrap(), raw expect() without context, silent catch {} / except: pass, or unhandled rejected promises.");
-            sb.AppendLine("    - FORBIDDEN lazy stub comments (e.g., '// TODO: implement later'). Any deferred logic must declare a full typed interface and explicitly throw a domain NotImplemented error with tracking context.");
+            sb.AppendLine("    - FORBIDDEN unchecked unwrap(), raw expect(), silent catch {} / except: pass, or unhandled rejected promises.");
+            sb.AppendLine("    - FORBIDDEN lazy stubs (e.g., '// TODO: implement later'). Deferred logic must declare typed interfaces and throw explicit domain NotImplemented errors.");
         }
 
         if (options.FunctionalCore)
         {
             sb.AppendLine("13. FUNCTIONAL CORE & IMPERATIVE SHELL:");
-            sb.AppendLine("    - Decouple pure business logic and state transitions from impure I/O (network, disk, subprocesses). Pure domain calculations must be deterministic and testable without mocks.");
+            sb.AppendLine("    - Decouple pure business logic and state transitions from impure I/O (disk, network). Domain logic must be deterministic and testable without mocks.");
         }
 
         if (options.ModernWebSources)
         {
             sb.AppendLine("14. MODERN WEB & DOCUMENTATION GUIDANCE:");
-            sb.AppendLine("    - When conducting web research, prioritize modern official documentation, current API references, and latest GitHub releases.");
-            sb.AppendLine("    - Avoid relying on obsolete blog tutorials or deprecated legacy patterns.");
+            sb.AppendLine("    - In web research, prioritize current official documentation and latest GitHub releases over obsolete blog tutorials.");
         }
 
         if (options.PremiumUiUx)
         {
             sb.AppendLine("15. PREMIUM UI/UX AESTHETIC MANDATE (ZERO BROWSER DEFAULTS):");
-            sb.AppendLine("    - DESIGN TOKENS FIRST: Enforce cohesive typography (Google Fonts: Inter, Roboto, or Outfit) and curated color schemes (Sleek Dark Mode, tailored HSL).");
-            sb.AppendLine("    - BANNED BROWSER DEFAULTS: Strictly FORBIDDEN raw browser buttons, unstyled links, basic HTML tables, and plain primary colors (#ff0000, #0000ff).");
-            sb.AppendLine("    - INTERACTIVE MICRO-ANIMATIONS: Every interactive element (buttons, cards, tabs, inputs) MUST feature hover, active, and focus states with smooth transitions (0.15s - 0.2s). The interface must feel responsive and alive.");
-            sb.AppendLine("    - RESPONSIVE FLUID LAYOUT: Enforce Flexbox/Grid on an 8px spacing system, structured card layering, elevation, and mobile responsiveness.");
+            sb.AppendLine("    - Enforce design tokens: modern typography (Inter/Roboto/Outfit), curated HSL/dark palette, 8px grid, smooth transitions (0.15s-0.2s).");
+            sb.AppendLine("    - Strictly FORBIDDEN raw browser buttons, unstyled tables/links, and default saturated primaries (#ff0000, #0000ff).");
         }
 
         if (options.InfiniteEvolution)
         {
             sb.AppendLine("16. INFINITE EVOLUTIONARY CONTINUUM (ENTERPRISE ROADMAP ADVANCEMENT):");
-            sb.AppendLine("    - CONTINUOUS ITERATION: Passing compilation and unit tests is a baseline milestone, NOT a stopping signal. Software evolution is an infinite continuum.");
-            sb.AppendLine("    - CHECKPOINT & ELEVATE: Upon achieving 100% test pass and zero errors, record a Git checkpoint, then proactively benchmark against world-class enterprise standards (e.g. SAP, Oracle WMS, Stripe).");
-            sb.AppendLine("    - AUTONOMOUS ROADMAP EXPANSION: Proactively initiate the next advancement phase (e.g. Predictive Analytics, Multi-Warehouse Routing, In-Memory Caching, WebSockets Telemetry, Audit Logs, RBAC) and formulate the execution roadmap without waiting for user prompting.");
-            sb.AppendLine("    - HALT CONDITION: Continue iterative advancement until explicit user pause or token budget termination.");
+            sb.AppendLine("    - Passing tests is a milestone, NOT a stopping signal. Upon 100% pass, checkpoint Git.");
+            sb.AppendLine("    - Autonomously formulate next phase roadmap (e.g., caching, telemetry, hardening) without waiting for prompts, until explicit user pause.");
         }
 
         if (options.RepoMap)
         {
             sb.AppendLine("17. CODEBASE REPO MAP RADAR:");
-            sb.AppendLine("    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to pinpoint target symbols before reading source files. Strictly avoid dumping massive files (>150 lines) into context.");
+            sb.AppendLine("    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context.");
         }
 
         sb.Append(MarkerEnd);
