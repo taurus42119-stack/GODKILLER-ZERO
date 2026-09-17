@@ -223,34 +223,37 @@ GK-ZERO มีกลไก enforce 3 ระดับ:
 
 ---
 
-## คู่มือแจกแจงการทำงานของ 18 ตั้งค่าติ๊ก (18 Invariant Checkbox Settings)
+## คู่มือแจกแจงการทำงานของ 19 ตั้งค่าติ๊ก (19 Invariant Checkbox Settings)
 
-การตั้งค่าในหน้า **AI Power & Guardrails Suite** (`ExtraSettingsForm`) ประกอบด้วย 18 ตัวเลือกหลัก ซึ่งแบ่งออกเป็น 3 กลุ่ม เพื่อปรับจูนความเข้มงวดและสไตล์ของ AI:
+การตั้งค่าในหน้า **AI Power & Guardrails Suite** (`ExtraSettingsForm`) ประกอบด้วย 19 ตัวเลือกหลัก ซึ่งแบ่งออกเป็น 4 กลุ่ม เพื่อปรับจูนความเข้มงวดและสไตล์ของ AI:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│               AI POWER & GUARDRAILS SUITE (18 CONTROLS)                │
+│               AI POWER & GUARDRAILS SUITE (19 CONTROLS)                │
 ├────────────────────────────────┬───────────────────────────────────────┤
 │ Group 1: Visual Intelligence & │ 1. 🎯 Zero Hallucination Guard        │
 │          Architecture          │ 2. 💎 Self-Documenting Code           │
-│          Blueprints (6 ตัว)    │ 3. 🏛️ Clean Domain Architecture       │
-│                                │ 4. ⚡ Instant Code Delivery           │
+│          Blueprints (6 ตัว)    │ 3. 🏛️ Clean Architecture              │
+│                                │ 4. ⚡ Instant Delivery                │
 │                                │ 5. 📐 Spatial Wireframing Blueprints  │
-│                                │ 6. 📊 Flowchart Architecture Generator│
+│                                │ 6. 📊 Flowchart Generator             │
 ├────────────────────────────────┼───────────────────────────────────────┤
 │ Group 2: Anti-Spaghetti Armor &│ 7. 🧩 Bite-Sized Functions (Span ≤ 70)│
 │          Quality Standards     │ 8. ✨ Frictionless Logic (CC ≤ 7)     │
 │          (4 ตัว)               │ 9. 🔍 Blast Radius Radar              │
-│                                │ 10. 🎯 Universal Stack Sensor         │
+│                                │ 10. 🎯 Stack Sensor                   │
 ├────────────────────────────────┼───────────────────────────────────────┤
 │ Group 3: Enterprise            │ 11. 🛡️ Ghost Edit Shield              │
-│          Bulletproofing &      │ 12. 🛑 Failure Loop Breaker           │
+│          Bulletproofing &      │ 12. 🛑 Loop Breaker                   │
 │          Production Shield     │ 13. 🚀 Crash Immunity (Ban unwrap)    │
 │          (8 ตัว)               │ 14. ⚙️ Decoupled Core Architecture   │
 │                                │ 15. 🌐 Modern Web Standards           │
 │                                │ 16. 🎨 Designer-Grade UI & Aesthetics │
 │                                │ 17. 📈 Proactive Roadmap Engine       │
-│                                │ 18. 🇹🇭 Native Thai Precision          │
+│                                │ 18. 🇹🇭 Thai Precision                 │
+├────────────────────────────────┼───────────────────────────────────────┤
+│ Group 4: Codebase Radar &      │ 19. 🌐 Deep Project Radar (RepoMap)   │
+│          Context Armor (1 ตัว) │                                       │
 └────────────────────────────────┴───────────────────────────────────────┘
 ```
 
@@ -409,6 +412,69 @@ GK-ZERO มีกลไก enforce 3 ระดับ:
 - **ข้อดี:** ทำให้โปรแกรมเมอร์ชาวไทยสามารถสั่งงานด้วยภาษาไทยตามธรรมชาติได้โดยไม่ต้องเกร็งภาษาอังกฤษ
 - **ข้อเสีย:** ไม่มีข้อเสีย (ประมวลผลบนเครื่องผ่าน Rust ทันที)
 - **คำแนะนำ:** **ควรเปิดตลอดเวลาสำหรับผู้ใช้งานที่พิมพ์คำสั่งภาษาไทย (Must-have for Thai Developers)**
+
+---
+
+### กลุ่มที่ 4: Codebase Radar & Context Armor (1 ตัวเลือก)
+
+#### 19. Deep Project Radar (`RepoMap`)
+- **กลไก:** 🔴 HARD (`RepoMapGenerator` Daemon + `.gemini/REPO_MAP.md`) + 🟡 SOFT (Rule 17)
+- **การทำงาน:** สแกนโครงสร้างทั้งโปรเจกต์ (Classes, Structs, Functions, บรรทัดที่อยู่) แล้วบันทึกเป็นแผนผังดัชนีภาพรวมแบบกระชับไว้ใน `.gemini/REPO_MAP.md` ทำให้ AI มี "แผนที่ดาวเทียม" ของโปรเจกต์ตั้งแต่วินาทีแรก
+- **ผลกระทบต่อ Token:** เพิ่ม Input Context เพียงเล็กน้อย (~200 - 450 tokens) แต่ **เซฟ Token คำสั่ง search_web / grep_search / list_dir ไปได้นับพันๆ tokens** ในแต่ละ Task
+- **ข้อดี:** AI ไม่หลงโฟลเดอร์ ไม่สร้างไฟล์ชื่อซ้ำซ้อน และรู้ว่าฟังก์ชันที่ต้องการเรียกใช้อยู่ตรงไหนทันที
+- **ข้อเสีย:** ถ้าโปรเจกต์มีไฟล์เป็นหมื่นๆ ไฟล์ แผนที่อาจต้องถูก Truncate ตามขีดจำกัดงบ Token
+- **คำแนะนำ:** **ควรเปิดตลอดเวลาสำหรับโปรเจกต์ระดับกลางถึงใหญ่ (Recommended ON)**
+
+---
+
+## 💰 เจาะลึกสมการ Token: ทำไม "ปิด ZERO กิน 3-4%" แต่ "เปิด ZERO พุ่งไป 10-15%"?
+
+คำถามยอดฮิตจากผู้ใช้งาน: *"ทำไมตอนปิด ZERO รันงานต่อรอบกิน Token เพียง 3-4% ของ Context แต่พอเปิด ZERO ปุ๊บ ทำไมตัวเลขพุ่งไปถึง 10-15% ต่อรอบ?"*
+
+คำตอบคือ **"ไม่ได้เกิดจากบั๊ก แต่เกิดจาก Cost ของ Guardrails และ Output ที่สั่งให้ AI ผลิตเพิ่มขึ้น 4-5 เท่า"** โดยแจกแจงสมการได้ดังนี้:
+
+### 1. สมการฝั่ง Input Tokens (System Context Injection)
+* **เมื่อปิด ZERO:** IDE ส่ง System Prompt สั้นๆ ตามปกติ (~800 - 1,200 tokens)
+* **เมื่อเปิด ZERO:** กฎเหล็ก Invariants ทั้ง 19 ข้อ + มาตรฐานความปลอดภัย + พิกัด Codebase Radar ถูก Hook ฝังเข้าไปใน System Prompt ตลอดเวลา ทำให้ทุกๆ 1 ข้อความที่เราคุย มี **Fixed Overhead เพิ่มขึ้นทันที ~1,800 - 2,500 tokens** เสมอ
+
+### 2. สมการฝั่ง Output Completion Tokens (ตัวการหลักที่พุ่งกระฉูด)
+เมื่อเปิด ZERO ค่า Default จะสั่งให้ AI ทำงานระดับ "วิศวกรรมสถาปัตยกรรมระดับสูง" ซึ่งทำให้ AI พ่น Output ยาวกว่าปกติมาก:
+* **📐 Spatial Wireframing (ASCII Blueprints):** การวาดกล่อง ASCII Diagram กิน Output Token เพิ่ม **+300 ถึง +600 tokens**
+* **📊 Flowchart Generator (Mermaid):** การวาดผังงาน Flowchart กิน Output Token เพิ่ม **+250 ถึง +500 tokens**
+* **🎨 Designer-Grade UI:** บังคับให้เขียน CSS ละเอียดยิบ (Glassmorphism, Animations, Gradients) จากเดิม 20 บรรทัด กลายเป็น 80 บรรทัด กิน Token เพิ่ม **+300 ถึง +600 tokens**
+* **📈 Proactive Roadmap Engine:** บังคับให้ท้ายคำตอบต้องมี Enterprise Scalability Roadmap ต่อยอดเสมอ กิน Token เพิ่ม **+200 ถึง +400 tokens**
+* **🚀 Crash Immunity:** บังคับเขียน Error Handling ละเอียด (Custom Error, Match types) ห้ามลักไก่ใช้ unwrap() ทำให้โค้ดยาวขึ้น 30-40%
+
+### 3. ตารางเปรียบเทียบ Token ต่อรอบจริง (Round-Trip Token Math)
+
+| องค์ประกอบ Token | 🔴 ปิด ZERO (No Guardrails) | 🟢 เปิด ZERO เต็มสูบ (Default All-ON) | ⚡ ZERO โหมดประหยัด (Zero-Bloat Tuning) |
+| :--- | :---: | :---: | :---: |
+| **System Rules Context** | ~1,000 tokens | ~2,500 tokens (+1,500) | ~2,500 tokens |
+| **User Prompt + Files** | ~1,000 tokens | ~1,000 tokens | ~1,000 tokens |
+| **ASCII / Mermaid Output** | **0 tokens** | **~700 tokens** | **0 tokens** (ปิด/Plans Only) |
+| **Code Implementation** | ~600 tokens (โค้ดดิบๆ) | ~1,200 tokens (Strict + Safe) | ~800 tokens (Clean & Modular) |
+| **Proactive Roadmap Output** | **0 tokens** | **~300 tokens** | **0 tokens** (ปิด) |
+| **รวม Token ต่อ 1 รอบ** | **~2,600 tokens (~3-4%)** | **~5,700 tokens (~10-15%)** | **~4,300 tokens (~5-6%)** |
+
+---
+
+### 4. Zero-Bloat Tuning Guide: วิธีตั้งค่าให้กิน 3-5% เท่าเดิม แต่ได้ Shield คุณภาพโค้ด 100%
+
+หากต้องการความประหยัด Token สูงสุด โดยที่ยังได้ระบบป้องกันโค้ดเน่า, ป้องกัน Ghost Edit, และ Circuit Breaker ครบถ้วน **ให้เข้าไปที่ปุ่ม `Extra (Tuning)` แล้วตั้งค่าตามนี้:**
+
+1. **ปิดฟีเจอร์ผลิตงานศิลป์และผังงานที่ไม่จำเป็นในงานแก้บั๊ก:**
+   * ❌ ปิด `📐 Spatial Wireframing` (หรือปรับดรอปดาวน์เป็น `Fast: Plans Only`) $\rightarrow$ **เซฟทันที ~400 tokens/รอบ**
+   * ❌ ปิด `📊 Flowchart Generator` (หรือปรับดรอปดาวน์เป็น `Fast: Plans Only`) $\rightarrow$ **เซฟทันที ~350 tokens/รอบ**
+   * ❌ ปิด `📈 Proactive Roadmap` $\rightarrow$ **เซฟทันที ~300 tokens/รอบ**
+   * ❌ ปิด `🎨 Designer-Grade UI` (ถ้าทำงาน Backend/Logic ล้วน) $\rightarrow$ **เซฟทันที ~300 tokens/รอบ**
+2. **เปิดเฉพาะ "แกนคุ้มกันสถาปัตยกรรม (Core Shields)" ที่แทบไม่กิน Token เพิ่ม:**
+   * ✅ เปิด `⚡ Instant Delivery (Zero Fluff)` (ช่วยตัดคำพูดทักทาย เซฟ Token ได้ ~50 tokens/รอบ)
+   * ✅ เปิด `🛡️ Ghost Edit Shield` (กัน AI แอบแก้ไฟล์อื่น)
+   * ✅ เปิด `🛑 Loop Breaker` (ตัดวงจรแก้บั๊กวนลูป)
+   * ✅ เปิด `🧩 Bite-Sized Functions` & `✨ Frictionless Logic` (คุมคุณภาพโค้ดบนเครื่องผ่าน Gatekeeper)
+   * ✅ เปิด `🎯 Stack Sensor` (ชี้เป้า Framework แม่นยำ)
+3. **ผลลัพธ์หลังจูน:**
+   * Token ต่อรอบจะลดฮวบลงมาเหลือเพียง **~4-6%** (ใกล้เคียงกับตอนปิด ZERO) แต่ได้โค้ดที่ผ่านการคัดกรองระดับ Production-Grade 100%!
 
 ---
 
