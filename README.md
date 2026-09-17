@@ -1,88 +1,79 @@
 <p align="center">
-  <img src="assets/banner.png" alt="GODKILLER ZERO — The Guardrail Layer for AI Coding" width="100%" />
+  <img src="assets/banner.png" alt="GODKILLER ZERO" width="100%" />
 </p>
 
-<h1 align="center">GODKILLER ZERO</h1>
+<br/>
 
 <p align="center">
-  <strong>The Guardrail Layer for AI Coding</strong><br/>
-  <em>Let AI <b>BUILD</b>. Make GODKILLER <b>VERIFY</b>.</em>
+  <a href="https://github.com/taurus42119-stack/GODKILLER-ZERO/releases/latest"><img src="https://img.shields.io/github/v/release/taurus42119-stack/GODKILLER-ZERO?style=for-the-badge&color=00d4ff&label=DOWNLOAD" /></a>
+  &nbsp;
+  <a href="LICENSE"><img src="https://img.shields.io/badge/MIT-License-white?style=for-the-badge" /></a>
+  &nbsp;
+  <img src="https://img.shields.io/badge/Windows-x64-111111?style=for-the-badge" />
+</p>
+
+<p align="center">
+  <b>The Guardrail Layer for AI Coding</b><br/>
+  <i>Let AI build. Make GODKILLER verify.</i>
 </p>
 
 <p align="center">
   <code>DONE IS NOT EVIDENCE.</code>
+</p>
+
+<p align="center">
+  Cursor · Claude · Gemini · Antigravity
   &nbsp;·&nbsp;
-  <code>Less tokens. More control.</code>
-</p>
-
-<p align="center">
-  <a href="https://github.com/taurus42119-stack/GODKILLER-ZERO/releases/latest"><img src="https://img.shields.io/github/v/release/taurus42119-stack/GODKILLER-ZERO?style=for-the-badge&label=DOWNLOAD&color=00d4ff" alt="Download" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-white?style=for-the-badge" alt="MIT" /></a>
-  <img src="https://img.shields.io/badge/PLATFORM-Windows%20x64-0a0a0a?style=for-the-badge" alt="Windows" />
-  <img src="https://img.shields.io/badge/MCP-gk__*-0a0a0a?style=for-the-badge" alt="MCP" />
-</p>
-
-<p align="center">
-  <b>Works with</b><br/>
-  <img src="https://img.shields.io/badge/Cursor-00d4ff?style=flat-square&logoColor=white" alt="Cursor" />
-  <img src="https://img.shields.io/badge/Claude-00d4ff?style=flat-square" alt="Claude" />
-  <img src="https://img.shields.io/badge/Gemini-00d4ff?style=flat-square" alt="Gemini" />
-  <img src="https://img.shields.io/badge/Antigravity-00d4ff?style=flat-square" alt="Antigravity" />
-</p>
-
-<p align="center">
   <a href="https://www.instagram.com/kayvins.th">@kayvins.th</a>
 </p>
 
 ---
 
-## Why it exists
+## Why
 
-AI can code.  
-It should not be allowed to break your project — then claim **done**.
+AI can code. It should not break your project — then claim **done**.
 
-<table>
-  <tr>
-    <th width="50%">Without ZERO</th>
-    <th width="50%">With ZERO</th>
-  </tr>
-  <tr>
-    <td align="center">vibe edits</td>
-    <td align="center"><b>targeted scope</b></td>
-  </tr>
-  <tr>
-    <td align="center">“finished” on hope</td>
-    <td align="center"><b>disk verification</b></td>
-  </tr>
-  <tr>
-    <td align="center">silent spaghetti</td>
-    <td align="center"><b>complexity / stub gates</b></td>
-  </tr>
-  <tr>
-    <td align="center">dump the whole repo</td>
-    <td align="center"><b>deep project radar</b></td>
-  </tr>
-  <tr>
-    <td align="center">long, unfocused agent loops</td>
-    <td align="center"><b>tighter aim · fewer wasted turns</b></td>
-  </tr>
-</table>
+| ❌ Without ZERO | ✅ With ZERO |
+| :--- | :--- |
+| vibe edits | targeted scope |
+| “finished” on hope | disk verification |
+| silent spaghetti | CC ≤ 7 · span ≤ 70 · no stubs |
+| dump the whole repo | deep project radar |
+| long unfocused loops | tighter aim |
 
 ---
 
-## Field signal (Cursor Usage)
+## Usage lab · Cursor
 
-Same model. New chat both sides. Same task prompt.
+Same task style. **New chat** each run. Same family of prompts.  
+Compare **without SHIELD** vs **with SHIELD**.
 
-| | Tokens |
-| :---: | :---: |
-| Before SHIELD | **585K** |
-| After SHIELD | **241.1K** |
-| Delta | **~59% lower** on that run |
+| Model | Without | With | Change | Fit |
+| :--- | ---: | ---: | ---: | :--- |
+| **Gemini 3.8 Flash** | 159.8K | 55.6K | **-65.2%** | 🔥 Best cut |
+| **Grok 4.6 High** | 585.0K | 241.1K | **-58.8%** | 🔥 Excellent |
+| **Claude Opus 5 Thinking** | 705.7K | 362.3K | **-48.7%** | 💪 Huge absolute save |
+| **GPT 5.6 Sol Medium** | 171.5K | 172.7K | **~0%** | 😐 Already terse |
 
-Model: `cursor-grok-4.6-high` · Source: Cursor Usage log
+```mermaid
+xychart-beta
+  title "Tokens per run (K) — Without vs With ZERO"
+  x-axis ["Gemini", "Grok", "Claude", "GPT"]
+  y-axis "Tokens (K)" 0 --> 750
+  bar [160, 585, 706, 172]
+  bar [56, 241, 362, 173]
+```
 
-> Not a lab benchmark. One controlled session. Your mileage will vary — but the direction matched what Zero Fluff + Target + Scope are built for: less wandering, more hit.
+### What that means
+
+| Rank | Model | Why ZERO fits |
+| :---: | :--- | :--- |
+| 1 | **Gemini Flash** | Biggest % drop when focus locks in |
+| 2 | **Grok High** | Was wandering hard; SHIELD cuts the tour |
+| 3 | **Claude Opus** | Still heavy, but nearly **halved** |
+| 4 | **GPT Medium** | Short by default — little fat to trim |
+
+> Lab notes, not a peer-reviewed benchmark. Absolute tokens depend on task size. Direction is clear on Flash / Grok / Opus.
 
 ---
 
@@ -90,224 +81,96 @@ Model: `cursor-grok-4.6-high` · Source: Cursor Usage log
 
 ```mermaid
 flowchart LR
-  A[You] --> B[AI Agent]
-  B --> C[GODKILLER ZERO]
-  C -->|SHIELD| D[Soft Rules<br/>Extra Tuning]
-  C -->|MCP / CLI| E[Disk Gatekeeper]
-  E --> F[(Your Files)]
-  E -->|PASS / FAIL| B
-  D --> B
+  You --> Agent
+  Agent --> ZERO[GODKILLER ZERO]
+  ZERO -->|SHIELD| Soft[Soft Rules + Extra]
+  ZERO -->|MCP / CLI| Hard[Disk Gatekeeper]
+  Hard --> Disk[(Files)]
+  Hard -->|PASS / FAIL| Agent
+  Soft --> Agent
 ```
 
-```mermaid
-stateDiagram-v2
-  [*] --> Coding: Agent starts
-  Coding --> ClaimDone: Model says done
-  ClaimDone --> Verify: gk_claim_done / --gate
-  Verify --> Pass: Clean disk
-  Verify --> Fail: Stub / CC / span / scope
-  Fail --> Coding: Fix again
-  Pass --> [*]
-```
-
-Three planes:
-
-| Plane | What | Force |
-| :--- | :--- | :---: |
-| **Soft rules** | Injected into Cursor / Claude / Gemini hosts | Behavioral |
-| **HARD gate** | `godkiller-console --gate` / `gk_gatekeeper_scan` | Disk |
-| **MCP tools** | `gk_claim_done` · `gk_gatekeeper_scan` · `gk_get_repo_map` | Protocol |
+| Plane | Force | Examples |
+| :--- | :---: | :--- |
+| Soft rules | Behavior | fluff ban · scope · blast · loops |
+| HARD gate | Disk | `--gate` · `gk_gatekeeper_scan` |
+| MCP | Protocol | `gk_claim_done` · `gk_get_repo_map` |
 
 ---
 
-## Control surface
+## Control
 
-| Mode | Name | Feel |
+| | | |
 | :---: | :--- | :--- |
-| **SHI** | Silent | Max autonomy |
-| **KEN** | Balanced | Confirm breaking changes |
-| **SHIN** | Turbo | Deep architect pressure |
-| **EXTRA** | Tuning | Flip every invariant |
+| **SHI** | Silent | max autonomy |
+| **KEN** | Balanced | confirm breaking changes |
+| **SHIN** | Turbo | deep architect pressure |
+| **EXTRA** | Tuning | 19 individual levers |
 
-| Action | Effect |
-| :--- | :--- |
-| **SHIELD** | Arm rules + MCP across hosts |
-| **RESTORE** | Strip ZERO only — peer MCPs stay |
+**SHIELD** arm · **RESTORE** disarm (peer MCPs untouched)
 
 ---
 
-## Feature pillars
+## Pillars
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 1. AI Guardrails
-Set boundaries **before** the model touches code.
-
+### 1 · AI Guardrails
+Boundaries before edits.  
 `Target · Scope · Stack · Architecture`
 
-| Extra toggle | Job |
-| :--- | :--- |
-| Zero Hallucination | Halt assumptions |
-| Ghost Edit Shield | Never touch untouched code |
-| Stack Sensor | Align to real manifests |
-| Thai Precision | Honor ห้าม / อย่า |
+Zero Hallucination · Ghost Edit Shield · Stack Sensor · Thai Precision
 
-</td>
-<td width="50%" valign="top">
-
-### 2. Verify Before Done
-Real filesystem check — not a chat claim.
-
-`Code · Scope · Complexity · Stub`
+### 2 · Verify Before Done
+Filesystem proof — not chat hope.
 
 ```text
 VERIFY
- ✓ Code Quality
- ✓ Scope Check
- ✓ Complexity   (CC ≤ 7)
- ✓ No Stub
- ✓ Disk State
- ✓ Span ≤ 70
+ ✓ Code Quality     ✓ Scope
+ ✓ Complexity ≤ 7   ✓ Span ≤ 70
+ ✓ No Stub          ✓ Disk State
 ```
 
-| Extra toggle | Job |
-| :--- | :--- |
-| Bite-Sized Functions | Cap span |
-| Frictionless Logic | Kill if-else pyramids |
-| Crash Immunity | Ban unwrap / empty catch |
-| Clean Architecture | No junk drawers |
+Bite-Sized Functions · Frictionless Logic · Crash Immunity · Clean Architecture
 
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 3. Blast Radius Radar
-See what breaks **before** you edit.
-
+### 3 · Blast Radius Radar
+See breakages before you touch them.  
 `Dependency · Caller · Impact`
 
-| Extra toggle | Job |
-| :--- | :--- |
-| Blast Radius Radar | Audit callers first |
-| Self-Documenting Code | Ban `data` / `res` / `req` |
+### 4 · Loop Breaker
+Kill “still failing” guess cycles. Demand logs.  
+Instant Delivery · Loop Breaker
 
-</td>
-<td width="50%" valign="top">
-
-### 4. Loop Breaker
-Stop repeat “still failing” loops.
-
-`Log · Diagnose · Fix`
-
-| Extra toggle | Job |
-| :--- | :--- |
-| Loop Breaker | Halt guess cycles |
-| Instant Delivery | Zero fluff / chitchat |
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 5. Deep Project Radar
-Understand the repo without dumping it.
-
-`Map · Target · Context · Plan`
-
-| Extra toggle | Job |
-| :--- | :--- |
-| Deep Project Radar | `gk_get_repo_map` |
-| Spatial Wireframing | ASCII plans |
-| Flowchart Generator | Mermaid flows |
-
-Cadence: **Fast** (plans only) · **Normal** (more diagrams)
-
-</td>
-<td width="50%" valign="top">
-
-### Bonus architecture knobs
-
-| Extra toggle | Job |
-| :--- | :--- |
-| Decoupled Core | Pure logic vs I/O |
-| Modern Web Standards | Prefer current docs |
-| Designer-Grade UI | Tokens / motion / dark |
-| Proactive Roadmap | Next phases after green |
-
-</td>
-</tr>
-</table>
-
-```mermaid
-flowchart TB
-  subgraph Agent["AI Agent"]
-    P[Plan]
-    E[Edit]
-    C[Claim done]
-  end
-  subgraph ZERO["GODKILLER ZERO"]
-    R[Rules Soft + Extra]
-    M[Repo Map]
-    G[Gatekeeper HARD]
-  end
-  P --> R
-  P --> M
-  E --> R
-  C --> G
-  G -->|evidence| C
-```
+### 5 · Deep Project Radar
+Map the repo — don’t dump it.  
+`gk_get_repo_map` · ASCII plans · Mermaid flows  
+Cadence: **Fast** (plans) · **Normal** (more diagrams)
 
 ---
 
-## Extra Tuning — full board
+## Extra board · 19 levers
 
-One SHIELD. Nineteen levers.
-
-| # | Toggle | Pillar |
-| ---: | :--- | :--- |
-| 1 | Zero Hallucination | Guardrails |
-| 2 | Self-Documenting Code | Blast / Quality |
-| 3 | Clean Architecture | Verify |
-| 4 | Instant Delivery | Loop / Tokens |
-| 5 | Spatial Wireframing | Radar / Plan |
-| 6 | Flowchart Generator | Radar / Plan |
-| 7 | Bite-Sized Functions | Verify |
-| 8 | Frictionless Logic | Verify |
-| 9 | Blast Radius Radar | Blast |
-| 10 | Stack Sensor | Guardrails |
-| 11 | Ghost Edit Shield | Guardrails |
-| 12 | Loop Breaker | Loop |
-| 13 | Crash Immunity | Verify |
-| 14 | Decoupled Core | Architecture |
-| 15 | Modern Web Standards | Architecture |
-| 16 | Designer-Grade UI | Architecture |
-| 17 | Proactive Roadmap | Architecture |
-| 18 | Thai Precision | Guardrails |
-| 19 | Deep Project Radar | Radar |
-
-Hard floor on disk (always available via CLI / MCP):
-
-- Cyclomatic complexity **≤ 7**
-- Function span **≤ 70**
-- No lazy stubs / banned generics
+| | Toggle | | Toggle |
+| :---: | :--- | :---: | :--- |
+| 01 | Zero Hallucination | 11 | Ghost Edit Shield |
+| 02 | Self-Documenting Code | 12 | Loop Breaker |
+| 03 | Clean Architecture | 13 | Crash Immunity |
+| 04 | Instant Delivery | 14 | Decoupled Core |
+| 05 | Spatial Wireframing | 15 | Modern Web Standards |
+| 06 | Flowchart Generator | 16 | Designer-Grade UI |
+| 07 | Bite-Sized Functions | 17 | Proactive Roadmap |
+| 08 | Frictionless Logic | 18 | Thai Precision |
+| 09 | Blast Radius Radar | 19 | Deep Project Radar |
+| 10 | Stack Sensor | | |
 
 ---
 
 ## Get it
 
-### Download
+**[Download for Windows →](https://github.com/taurus42119-stack/GODKILLER-ZERO/releases/latest)**
 
-**[→ Latest Windows release](https://github.com/taurus42119-stack/GODKILLER-ZERO/releases/latest)**
-
-1. Unzip `godkiller-zero-windows-x86_64.zip`  
+1. Unzip  
 2. Run `GodkillerZero.exe`  
-3. Click **SHIELD**  
-4. Open **EXTRA** — flip only what you need
-
-### One-liner
+3. Hit **SHIELD**  
+4. Open **EXTRA** — enable only what you need  
 
 ```powershell
 irm https://raw.githubusercontent.com/taurus42119-stack/GODKILLER-ZERO/main/install.ps1 | iex
@@ -315,18 +178,12 @@ irm https://raw.githubusercontent.com/taurus42119-stack/GODKILLER-ZERO/main/inst
 
 ---
 
-## Build from source
+## Build
 
-Needs **Rust** + **.NET SDK 9+**
+Rust + .NET SDK 9+
 
 ```powershell
 .\build.ps1
-```
-
-```text
-publish\
-  GodkillerZero.exe
-  godkiller-console.exe
 ```
 
 ```powershell
@@ -335,34 +192,15 @@ godkiller-console --repo-map .
 godkiller-console --mcp
 ```
 
-| MCP tool | Role |
+| Tool | Role |
 | :--- | :--- |
-| `gk_gatekeeper_scan` | Hygiene / CC / span / stubs |
-| `gk_get_repo_map` | Compact project skeleton |
-| `gk_claim_done` | Outbound “done” with disk proof |
-
----
-
-## What you get
-
-| | |
-| :--- | :--- |
-| **Stronger security** | Block risky / out-of-scope edits |
-| **Lower wasted usage** | Fewer unfocused loops · smarter context |
-| **Better code quality** | CC / span / stub discipline on disk |
-| **Full control** | Your rules. Your Extra board. |
-| **Open source** | MIT |
-
----
-
-## License
-
-MIT — free to use, fork, and ship. See [LICENSE](LICENSE).
+| `gk_gatekeeper_scan` | hygiene · CC · span · stubs |
+| `gk_get_repo_map` | compact skeleton |
+| `gk_claim_done` | done ≠ evidence |
 
 ---
 
 <p align="center">
-  <strong>Less chaos. More control.</strong><br/>
-  <sub>Built to kill vibe-coding — not creativity.</sub><br/>
-  <sub>@kayvins.th</sub>
+  <b>Less chaos. More control.</b><br/>
+  <sub>MIT · Built to kill vibe-coding — not creativity · @kayvins.th</sub>
 </p>
