@@ -25,8 +25,37 @@ static class Program
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetThreadDesktop(int dwThreadId);
+
+    [DllImport("kernel32.dll")]
+    private static extern int GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    private static extern bool GetUserObjectInformation(IntPtr hObj, int nIndex, System.Text.StringBuilder pvInfo, int nLength, out int lpnLengthNeeded);
+
+    public static string GetCurrentDesktopName()
+    {
+        try
+        {
+            IntPtr h = GetThreadDesktop(GetCurrentThreadId());
+            var sb = new System.Text.StringBuilder(256);
+            int len;
+            if (GetUserObjectInformation(h, 2, sb, 256, out len))
+            {
+                string name = sb.ToString().Trim();
+                if (!string.IsNullOrEmpty(name)) return name;
+            }
+        }
+        catch { }
+        return "Default";
+    }
+
+    public static string ScopedMutexName => $"Local\\GodkillerZeroGui_Mutex_{GetCurrentDesktopName()}";
+    public static string ScopedPipeName => $"GodkillerZero_WakePipe_{GetCurrentDesktopName()}";
+    public static string ScopedWakeUpEventName => $"GodkillerZeroGui_ShowEvent_{GetCurrentDesktopName()}";
+
     public const string ActivateMessageName = "GODKILLER_ZERO_ACTIVATE_WINDOW";
-    public const string WakeUpEventName = "GodkillerZeroGui_ShowEvent";
 
     public static void Log(string msg)
     {
@@ -41,7 +70,7 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        Log($"Started with args: {string.Join(" ", args)}");
+        Log($"Started on desktop '{GetCurrentDesktopName()}' with args: {string.Join(" ", args)}");
         if (args.Length > 0)
         {
             string cmd = args[0].ToLowerInvariant();
@@ -72,12 +101,12 @@ static class Program
             }
         }
 
-        const string mutexName = "Local\\GodkillerZeroGui_SingleInstance_Mutex";
+        string mutexName = ScopedMutexName;
         bool isOnlyInstance;
         try
         {
             _mutex = new Mutex(true, mutexName, out isOnlyInstance);
-            Log($"Mutex acquired, isOnlyInstance={isOnlyInstance}");
+            Log($"Mutex '{mutexName}' acquired, isOnlyInstance={isOnlyInstance}");
         }
         catch (AbandonedMutexException)
         {
@@ -122,15 +151,14 @@ static class Program
         GC.KeepAlive(_mutex);
     }
 
-    public const string PipeName = "GodkillerZero_WakePipe";
     public const string MainWindowTitle = "GODKILLER ZORO 1.0";
 
     private static bool ActivateExistingInstance()
     {
-        // 1. Primary: Named Pipe IPC (Cross-desktop, 100% reliable)
+        // 1. Primary: Named Pipe IPC (Desktop-scoped, 100% reliable)
         try
         {
-            using var client = new System.IO.Pipes.NamedPipeClientStream(".", PipeName, System.IO.Pipes.PipeDirection.Out);
+            using var client = new System.IO.Pipes.NamedPipeClientStream(".", ScopedPipeName, System.IO.Pipes.PipeDirection.Out);
             client.Connect(350);
             client.WriteByte(1);
             client.Flush();
@@ -142,10 +170,10 @@ static class Program
             Log($"NamedPipe wake error: {exPipe.Message}");
         }
 
-        // 2. Secondary: EventWaitHandle (Cross-desktop kernel object)
+        // 2. Secondary: EventWaitHandle (Desktop-scoped kernel object)
         try
         {
-            using var wakeEvent = EventWaitHandle.OpenExisting(WakeUpEventName);
+            using var wakeEvent = EventWaitHandle.OpenExisting(ScopedWakeUpEventName);
             if (wakeEvent.Set())
             {
                 Log("Activated existing instance via EventWaitHandle.");

@@ -799,7 +799,7 @@ public class MainForm : Form
                 try
                 {
                     using var server = new System.IO.Pipes.NamedPipeServerStream(
-                        Program.PipeName,
+                        Program.ScopedPipeName,
                         System.IO.Pipes.PipeDirection.In,
                         1,
                         System.IO.Pipes.PipeTransmissionMode.Byte,
@@ -1036,7 +1036,7 @@ public class MainForm : Form
     {
         try
         {
-            _wakeUpEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.WakeUpEventName);
+            _wakeUpEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.ScopedWakeUpEventName);
             _registeredWait = ThreadPool.RegisterWaitForSingleObject(
                 _wakeUpEvent,
                 (state, timedOut) =>
