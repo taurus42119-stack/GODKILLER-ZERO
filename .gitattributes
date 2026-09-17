@@ -1,0 +1,27 @@
+# Auto-detect text files and perform LF normalization on checkout
+* text=auto eol=lf
+
+# Force CRLF for Windows specific scripts
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Force LF for source files and configs
+*.rs text eol=lf
+*.cs text eol=lf
+*.js text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary files
+*.png binary
+*.ico binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.pdb binary

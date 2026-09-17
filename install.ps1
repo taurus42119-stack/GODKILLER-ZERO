@@ -13,8 +13,8 @@ if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 }
 
-$CurrentExe = if (Test-Path "$PSScriptRoot\godkiller-console.exe") { "$PSScriptRoot\godkiller-console.exe" } else { "$PSScriptRoot\godkiller-zero.exe" }
-$CurrentGui = if (Test-Path "$PSScriptRoot\GodkillerZero.exe") { "$PSScriptRoot\GodkillerZero.exe" } else { "$PSScriptRoot\GodkillerZeroGui.exe" }
+$CurrentExe = "$PSScriptRoot\godkiller-console.exe"
+$CurrentGui = "$PSScriptRoot\GodkillerZero.exe"
 
 if (Test-Path $CurrentExe) {
     Copy-Item $CurrentExe -Destination $ExePath -Force
@@ -49,12 +49,6 @@ if (-not (Test-Path $ExePath)) {
     Remove-Item $ZipPath -Force
 }
 
-if (-not (Test-Path $ExePath) -and (Test-Path "$InstallDir\godkiller-zero.exe")) {
-    $ExePath = "$InstallDir\godkiller-zero.exe"
-}
-if (-not (Test-Path $GuiPath) -and (Test-Path "$InstallDir\GodkillerZeroGui.exe")) {
-    $GuiPath = "$InstallDir\GodkillerZeroGui.exe"
-}
 
 # Add to User PATH if not present
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")

@@ -24,11 +24,7 @@ jobs:
           $Url = "https://github.com/taurus42119-stack/godkiller-zero/releases/latest/download/godkiller-zero-windows-x86_64.zip"
           Invoke-WebRequest -Uri $Url -OutFile "$env:TEMP/godkiller.zip" -UseBasicParsing
           Expand-Archive -Path "$env:TEMP/godkiller.zip" -DestinationPath "$env:TEMP/gk" -Force
-          if (Test-Path "$env:TEMP/gk/godkiller-console.exe") {
-            Copy-Item "$env:TEMP/gk/godkiller-console.exe" -Destination "./godkiller-console.exe" -Force
-          } else {
-            Copy-Item "$env:TEMP/gk/godkiller-zero.exe" -Destination "./godkiller-console.exe" -Force
-          }
+          Copy-Item "$env:TEMP/gk/godkiller-console.exe" -Destination "./godkiller-console.exe" -Force
 
       - name: Run Cognitive Pre-Flight Disk Gate
         shell: pwsh

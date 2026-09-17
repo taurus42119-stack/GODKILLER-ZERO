@@ -16,7 +16,5 @@ if %ERRORLEVEL% NEQ 0 (
         start "" "%~dp0GodkillerZero.exe"
     ) else if exist "%~dp0publish\GodkillerZero.exe" (
         start "" "%~dp0publish\GodkillerZero.exe"
-    ) else (
-        start "" "%~dp0GodkillerZeroGui.exe"
     )
 )

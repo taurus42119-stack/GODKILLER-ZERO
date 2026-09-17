@@ -217,11 +217,14 @@ GODKILLER ZERO/
 │   ├── antigravity_isolation_test.rs  # Loopback security, fast-lane & envelope tests (8 tests)
 │   └── contract_evaluation_test.rs    # Invariant contract, Multi-language coords & Circuit breaker (14 tests)
 ├── Cargo.toml                         # Tokio, Axum, Serde, Clap, Regex
-├── install.ps1                        # 1-Liner PowerShell Enterprise Installer
-├── feature_audit.md                   # Feature audit report across 16 Rules & Bug tracker
-├── SECURITY_CHECKLIST.md              # Security hardening, path remapping & privacy checklist
+├── CONTRIBUTING.md                    # Community contribution guidelines
+├── LICENSE                            # MIT License
+├── README.md                          # Production-grade cognitive pre-flight documentation
+├── SECURITY.md                        # Security policy and vulnerability reporting
 ├── SPECIFICATION.md                   # เอกสารพิมพ์เขียวฉบับสมบูรณ์ (ไฟล์นี้)
-└── README.md                          # เอกสารคู่มือผู้ใช้แบบ Zero-Friction
+├── build.ps1                          # PowerShell build and packaging pipeline
+├── install-and-run.bat                # 1-Click launcher script
+└── install.ps1                        # 1-Liner PowerShell installer
 ```
 
 ---
