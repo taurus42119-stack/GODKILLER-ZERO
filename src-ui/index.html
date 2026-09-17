@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#16171a">
+  <title>GODKILLER ZERO — Antigravity</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="g-window" id="app">
+    <!-- Header Bar -->
+    <header class="g-header-bar">
+      <div class="g-title-block">
+        <img src="/logo.png" alt="GODKILLER Logo" class="g-header-logo">
+        <span class="g-app-title">GODKILLER ZERO — Antigravity</span>
+      </div>
+      <div class="g-title-status" id="header-status-badge">
+        <span class="g-status-dot"></span>
+        <span id="header-status-text">Shielded</span>
+      </div>
+    </header>
+
+    <!-- Main Content Flow (Card Stack) -->
+    <main class="g-main-content">
+      <!-- SECTION 0: AI NEURAL ENGINE & SELF-HEALING TELEMETRY -->
+      <section class="g-section-box" id="engine-section">
+        <div class="g-section-header">
+          <div class="g-section-title">
+            <span id="engine-header-label">AI Engine: Detecting...</span>
+          </div>
+          <div class="g-section-telemetry" id="engine-telemetry">qwen2.5-coder:1.5b</div>
+        </div>
+
+        <div class="g-engine-card">
+          <div class="g-engine-row">
+            <div class="g-engine-status-pill" id="engine-status-pill">
+              <span class="g-pill-dot" id="engine-status-dot"></span>
+              <span id="engine-status-text">Checking Local Ollama...</span>
+            </div>
+            <button class="g-engine-retry-btn" id="btn-engine-bootstrap" title="Sync / Retry Engine Bootstrap">
+              Sync
+            </button>
+          </div>
+
+          <div class="g-engine-progress-wrapper" id="engine-progress-wrapper" style="display: none;">
+            <div class="g-engine-progress-track">
+              <div class="g-engine-progress-bar" id="engine-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="g-engine-progress-meta">
+              <span id="engine-progress-status">Downloading Model...</span>
+              <span id="engine-progress-percent">0%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 1: DISCIPLINE MODE -->
+      <section class="g-section-box">
+        <div class="g-section-header">
+          <div class="g-section-title">
+            <span id="discipline-header-label">Mode: KEN (Strict-Dev)</span>
+          </div>
+          <div class="g-section-telemetry" id="discipline-telemetry">Span &le; 70 • CC &le; 7</div>
+        </div>
+
+        <div class="g-tile-grid g-tile-4">
+          <button class="g-tile-btn" id="tile-discipline-shi" title="SHI - Tranquil Exploratory Mode">
+            <span class="g-tile-label">Silent</span>
+            <span class="g-tile-sub">SHI</span>
+          </button>
+          <button class="g-tile-btn active" id="tile-discipline-ken" title="KEN - Standard Strict-Dev Mode">
+            <span class="g-tile-label">Balanced</span>
+            <span class="g-tile-sub">KEN</span>
+          </button>
+          <button class="g-tile-btn" id="tile-discipline-shin" title="SHIN - Zero-Tolerance Strict Mode">
+            <span class="g-tile-label">Turbo</span>
+            <span class="g-tile-sub">SHIN</span>
+          </button>
+          <button class="g-tile-btn g-tile-extra" id="btn-open-extra" title="Configure detailed architectural invariants">
+            <span class="g-tile-label">Extra</span>
+            <span class="g-tile-sub">Invariants</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- SECTION 2: IDE RULES HOOK CONTROLLER -->
+      <section class="g-section-box">
+        <div class="g-section-header">
+          <div class="g-section-title">
+            <span id="shield-header-label">IDE Rules Status: Checking...</span>
+          </div>
+          <div class="g-section-telemetry" id="shield-telemetry">~/.gemini/GEMINI.md</div>
+        </div>
+
+        <div class="g-tile-grid g-tile-2">
+          <button class="g-tile-btn" id="btn-toggle-hook" title="Inject Invariant Rules into ~/.gemini/GEMINI.md">
+            <span class="g-tile-label" style="font-weight:700;">Hook Rules</span>
+            <span class="g-tile-sub">Shield AI Engine</span>
+          </button>
+          <button class="g-tile-btn" id="btn-toggle-unhook" title="Remove all Invariant Rules from ~/.gemini/GEMINI.md">
+            <span class="g-tile-label" style="font-weight:700;">Unhook Rules</span>
+            <span class="g-tile-sub">Restore Default IDE</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- SECTION 3: PRE-FLIGHT CONTRACT COMPILER -->
+      <section class="g-section-box">
+        <div class="g-section-header">
+          <div class="g-section-title">
+            <span>Pre-Flight AI Compiler</span>
+          </div>
+          <div class="g-section-telemetry" id="crucible-stats">Ready</div>
+        </div>
+
+        <div class="g-compiler-container">
+          <textarea class="g-native-textarea" id="crucible-input" placeholder="Type intent to compile into zero-vibe contract (e.g. Update ThemeToggle button styling)..." rows="2"></textarea>
+          
+          <div class="g-clarifier-tray" id="clarifier-section" style="display: none;">
+            <div class="g-clarifier-label">Clarifications:</div>
+            <div class="g-chips-row" id="clarifier-chips"></div>
+          </div>
+
+          <div class="g-compiler-action-row">
+            <div class="g-scope-indicator pass" id="pill-scope">
+              <span class="g-pill-dot"></span>
+              <span id="label-scope">Scope: Auto-Detected</span>
+            </div>
+            <div class="g-scope-indicator" id="pill-polarity" style="display: none;">
+              <span class="g-pill-dot"></span>
+              <span id="label-polarity">Shield: Normal</span>
+            </div>
+            <button class="g-compile-btn" id="btn-crucible">
+              Compile &amp; Copy
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: STARTUP & TELEMETRY ROW -->
+      <section class="g-startup-bar">
+        <label class="g-check-item">
+          <input type="checkbox" id="chk-run-startup" class="g-checkbox">
+          <span class="g-checkbox-custom"></span>
+          <span class="g-check-text">Run on Startup</span>
+        </label>
+        <div class="g-startup-note" id="startup-note">Boot: Auto-Start</div>
+      </section>
+
+      <!-- Version & Author Bar -->
+      <div class="g-version-row">
+        <a href="https://github.com/taurus42119-stack/godkiller-zero/releases" target="_blank" class="g-link-sub">
+          Version: 1.0.0
+        </a>
+        <span class="g-sep">•</span>
+        <a href="https://www.instagram.com/kayvins.th" target="_blank" class="g-link-sub" title="Follow Developer on Instagram (@kayvins.th)">
+          @kayvins.th
+        </a>
+      </div>
+    </main>
+
+    <!-- FOOTER ACTIONS BAR -->
+    <footer class="g-footer-bar">
+      <button class="g-foot-btn" id="btn-rehook" title="Force Re-hook into ~/.gemini/GEMINI.md">
+        Hook
+      </button>
+      <button class="g-foot-btn g-foot-unhook" id="btn-unhook" title="Unhook and restore Google Antigravity to default">
+        Unhook
+      </button>
+      <button class="g-foot-btn" id="btn-check-updates" title="Check latest releases on GitHub">
+        Updates
+      </button>
+      <button class="g-foot-btn g-foot-quit" id="btn-quit" title="Quit GODKILLER ZERO">
+        Quit
+      </button>
+    </footer>
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="g-toast" id="toast">Ready</div>
+
+    <!-- FLOATING CARD: EXTRA SETTINGS MODAL -->
+    <div class="g-floating-backdrop" id="extra-settings-modal" style="display: none;">
+      <div class="g-floating-card">
+        <div class="g-floating-header">
+          <div class="g-floating-title">
+            Extra Invariant Settings
+          </div>
+          <button class="g-floating-close" id="btn-close-extra-modal" title="Close">&times;</button>
+        </div>
+
+        <div class="g-floating-body">
+          <!-- Group 1: Core Negative Invariants -->
+          <div class="g-group-box">
+            <div class="g-group-title">Cognitive Invariants &amp; Boundary Rules</div>
+            
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-zero-speculation" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Zero-Speculation: Never guess on ambiguity</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-ban-generic" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Ban Generic Identifiers: No data, res, req, temp</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-ban-junk" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Ban Junk Drawers: Prohibit utils/ and helpers/</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-zero-fluff" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Zero Fluff: First-Token code, zero chatter</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-ascii-blueprints" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">ASCII Blueprints: Mandatory code-fence wireframes</span>
+            </label>
+          </div>
+
+          <!-- Group 2: Code Span & Complexity Budgets -->
+          <div class="g-group-box">
+            <div class="g-group-title">Code Span &amp; Complexity Budgets</div>
+            
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-limit-span" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Max Function Span: Restrict to budget</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-complexity" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Complexity Budget: Restrict cyclomatic score</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-blast-radius" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Blast Radius: Audit caller &amp; route impacts</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-stack-sensor" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Stack Auto-Sense: Detect Tailwind, Next, Rust</span>
+            </label>
+          </div>
+
+          <!-- Group 3: OMEGA Guardrails & Cognitive Shield -->
+          <div class="g-group-box">
+            <div class="g-group-title">OMEGA Guardrails &amp; Circuit Breaker</div>
+            
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-negative-bounding" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Ghost Edit Shield: Preserve untouched code</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-circuit-breaker" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Circuit Breaker: Lockdown on loop failures</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-exhaustive-errors" class="g-checkbox" checked>
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Zero Unwraps: Ban unwrap() &amp; silent catch</span>
+            </label>
+            <label class="g-check-item">
+              <input type="checkbox" id="rule-functional-core" class="g-checkbox">
+              <span class="g-checkbox-custom"></span>
+              <span class="g-check-text">Functional Core: Decouple domain from I/O</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="g-floating-footer">
+          <button class="g-btn-primary" id="btn-save-shield">Save &amp; Apply</button>
+          <button class="g-btn-danger" id="btn-modal-unhook" title="Unhook and restore Google Antigravity to default">Unhook IDE</button>
+          <button class="g-btn-secondary" id="btn-inspect-rules">Inspect</button>
+          <button class="g-btn-secondary" id="btn-done-extra-modal">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAW INVARIANTS INSPECTOR MODAL -->
+    <div class="g-floating-backdrop" id="rules-modal" style="display: none;">
+      <div class="g-floating-card">
+        <div class="g-floating-header">
+          <div class="g-floating-title">
+            Active Invariant Manifest
+          </div>
+          <button class="g-floating-close" id="btn-close-rules-modal" title="Close">&times;</button>
+        </div>
+        <div class="g-floating-body">
+          <pre class="g-raw-manifest" id="rules-modal-content">Loading active rules...</pre>
+        </div>
+        <div class="g-floating-footer">
+          <button class="g-btn-primary" id="btn-copy-rules">Copy Rules</button>
+          <button class="g-btn-secondary" id="btn-done-rules-modal">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

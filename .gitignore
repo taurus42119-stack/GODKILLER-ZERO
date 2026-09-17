@@ -1,0 +1,40 @@
+# Rust / Cargo
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Binary Outputs & Debug Symbols
+*.exe
+*.dll
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+godkiller-zero.exe
+
+# .NET / C# Build & Publish
+gui-csharp/bin/
+gui-csharp/obj/
+publish/
+bin/
+obj/
+
+# IDE & OS
+.idea/
+.vscode/
+.gemini/
+.cargo/config.toml
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment & Credentials
+.env
+.env.*
+*.pem
+*.key
+
+# Build & Logs
+*.log
+dist/
+node_modules/
