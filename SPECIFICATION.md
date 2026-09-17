@@ -75,17 +75,18 @@ AI Clients ───►│  [Strict Loopback Binding: 127.0.0.1]  │ (ปฏิ
 ## 3. สถาปัตยกรรมสัญญา Isomorphic & กฎเหล็ก 16 สัจพจน์ (The 16 Invariant Rules)
 
 ```text
-[ เจตจำนงมนุษย์ ] ──► [ LINGUISTIC TRANSPILER ] ──► [ 4-BRANCH QUANTUM SUPERPOSITION ]
+[ เจตจำนงมนุษย์ ] ──► [ LINGUISTIC TRANSPILER ] ──► [ 4-BRANCH INVARIANT EVALUATOR ]
                                 │
                ┌────────────────┴────────────────┐
                ▼                                 ▼
       [ Exploratory Inquiry ]          [ Architectural Mutation ]
       • ถามความรู้ / อธิบายทฤษฎี        • สั่งแก้โค้ด / ลบ / เพิ่มฟังก์ชัน
-      • ยกเว้นพิกัดไฟล์ (Domain Scope)  • บังคับ Hoare Contract {P} Target {Q}
+      • ยกเว้นพิกัดไฟล์ (Domain Scope)  • บังคับ Invariant Contract {P} Target {Q}
       • บังคับตอบกระชับ ไร้น้ำ         • บังคับ 16 Invariant Rules & CC <= 7
 ```
 
-### 3.1 Hoare-Logic Isomorphic Contract
+### 3.1 Structural Invariant Contract (Pre/Post-Condition Specification)
+The evaluator structures intent through structural pre- and post-condition invariants:
 $$\{ \mathcal{P}_{\text{pre}} \} \quad \mathcal{C}[\text{Coordinate}] \quad \{ \mathcal{Q}_{\text{post}} \} \quad \text{bound by} \quad \mathcal{I}_{\text{invariants}}$$
 
 ### 3.2 บัญญัติ 16 สัจพจน์สถาปัตยกรรม (The 16 Ironclad Rules)
@@ -151,7 +152,7 @@ $$\{ \mathcal{P}_{\text{pre}} \} \quad \mathcal{C}[\text{Coordinate}] \quad \{ \
 * **สถานะชุดทดสอบปัจจุบัน:** **66 / 66 Tests Passed (100% Pass Rate)**
   * `src/lib.rs`: 44 Unit Tests (รวม Rule 12 Multi-Language Stubs, Smart Terminal Pruning, Semantic AST, และ Banned Identifiers)
   * `tests/antigravity_isolation_test.rs`: 8 Integration Tests (รวม Loopback Security, Thai Polarity, และ Envelope Isolation)
-  * `tests/quantum_hoare_test.rs`: 14 Domain & Contract Tests (รวม Hoare Contract, Multi-language Coordinates, และ Intent Circuit Breaker)
+  * `tests/contract_evaluation_test.rs`: 14 Domain & Contract Tests (รวม Invariant Contract, Multi-language Coordinates, และ Intent Circuit Breaker)
 * **CI Pipeline (`.github/workflows/ci.yml` & `release.yml`):** รัน `cargo fmt`, `cargo clippy -D warnings`, `cargo test`, และคอมไพล์ release binary พร้อม sanitize path ผ่าน `--remap-path-prefix` ใน CI
 
 ---
@@ -176,7 +177,7 @@ GODKILLER ZERO/
 │   │   ├── formal_contract.rs         # Zero-Copy Cow<'a, str> HoareContract {P} Target {Q}
 │   │   ├── gatekeeper.rs              # Disk Scanner: Multi-Language CC, Span & Rule 12 Stub auditor
 │   │   ├── linguistic_transpiler.rs   # Thai->English IR, Negation Guard & Circuit Breaker
-│   │   ├── quantum_simulator.rs       # 4-Branch Simulation & Semantic Post-Condition validator
+│   │   ├── contract_evaluator.rs      # 4-Branch Invariant Evaluation & Semantic Post-Condition validator
 │   │   ├── repo_map.rs                # Repository topology tree generator
 │   │   ├── stack_sensor.rs            # Universal Tech Stack Sensor (package.json, Cargo.toml)
 │   │   ├── symbol_graph.rs            # Semantic Symbol graph & Blast Radius impact auditor
@@ -185,7 +186,7 @@ GODKILLER ZERO/
 │   │   ├── zero_bridge.rs             # Post-Prompt Isomorphic Bridge
 │   │   └── mod.rs
 │   ├── proxy/
-│   │   ├── handlers.rs                # /v1 OpenAI endpoints, Quantum Crucible & Hook routes
+│   │   ├── handlers.rs                # /v1 OpenAI endpoints, Intent Crucible & Hook routes
 │   │   ├── mcp.rs                     # Native Model Context Protocol (JSON-RPC stdio: gk_claim_done)
 │   │   ├── sanitizer.rs               # Prompt injection sanitizer & Origin Host Guard
 │   │   ├── server.rs                  # Loopback server with embedded UI & desktop card launcher
@@ -208,13 +209,13 @@ GODKILLER ZERO/
 │   ├── Theme.cs                       # Dark Acrylic Theme palette
 │   └── Program.cs
 ├── src-ui/                            # Japanese Zen Minimalist UI (ฝังในตัวไบนารีผ่าน include_str!)
-│   ├── index.html                     # Neural Engine Card & Quantum Intent Crucible
+│   ├── index.html                     # Neural Engine Card & Intent Crucible
 │   ├── style.css                      # โทนสี Sumi Ink, Washi, Koke Moss, Urushi
 │   ├── app.js                         # 1-Click Hook, Crucible Dispatcher & Engine Sync
 │   └── favicon.svg
 ├── tests/
 │   ├── antigravity_isolation_test.rs  # Loopback security, fast-lane & envelope tests (8 tests)
-│   └── quantum_hoare_test.rs          # Hoare contract, Multi-language coords & Circuit breaker (14 tests)
+│   └── contract_evaluation_test.rs    # Invariant contract, Multi-language coords & Circuit breaker (14 tests)
 ├── Cargo.toml                         # Tokio, Axum, Serde, Clap, Regex
 ├── install.ps1                        # 1-Liner PowerShell Enterprise Installer
 ├── feature_audit.md                   # Feature audit report across 16 Rules & Bug tracker
@@ -227,7 +228,7 @@ GODKILLER ZERO/
 
 ## 8. Zero-Friction Ingress Architecture
 1. **1-Click Native Hook:** เขียนกฎ 16 สัจพจน์ลง `~/.gemini/GEMINI.md`, `.cursorrules`, `CLAUDE.md`, และ `.github/copilot-instructions.md` ทันทีโดยไม่ต้องแก้ Settings
-2. **Quantum Intent Crucible:** ฟอกภาษาธรรมชาติภาษาไทย บีบอัดเป็น Technical English Hoare Contract และคัดลอกลง Clipboard อัตโนมัติ
+2. **Intent Crucible:** ฟอกภาษาธรรมชาติภาษาไทย บีบอัดเป็น Technical English Invariant Contract และคัดลอกลง Clipboard อัตโนมัติ
 3. **Local Gatekeeper CLI (`--gate`):** สแกนโปรเจกต์บนดิสก์จริง บล็อกสปาเกตตี้โค้ดก่อน Commit
 
 ---

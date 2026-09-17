@@ -1,5 +1,5 @@
 use crate::domain::{
-    AntiSpaghettiDirective, IngressEvaluationVerdict, PruneResult, QuantumSuperpositionSimulator,
+    AntiSpaghettiDirective, IngressEvaluationVerdict, InvariantContractEvaluator, PruneResult,
     TerminalPruner, TriPillarEvaluator,
 };
 use crate::proxy::sanitizer::{EgressFluffStripper, IngressSecuritySanitizer};
@@ -158,15 +158,15 @@ fn enrich_envelope_with_compiled_contract(
     is_antigravity: bool,
     runtime_state: &ProxyRuntimeState,
 ) {
-    let simulation_receipt = QuantumSuperpositionSimulator::simulate_superposition(
+    let simulation_receipt = InvariantContractEvaluator::evaluate(
         prompt_to_evaluate,
         &runtime_state.anti_spaghetti_directive,
     );
 
     let contract_spec_opt = simulation_receipt
-        .dense_symbolic_ir_spec
+        .diagnostic_spec
         .as_ref()
-        .or(simulation_receipt.hoare_contract_spec.as_ref());
+        .or(simulation_receipt.contract_spec.as_ref());
 
     if let Some(target_contract_spec) = contract_spec_opt {
         let compressed_text = if is_antigravity {
@@ -418,7 +418,7 @@ pub async fn purify_prompt_api_handler(
         return Json(early_exit_envelope);
     }
 
-    let simulation_receipt = QuantumSuperpositionSimulator::simulate_superposition(
+    let simulation_receipt = InvariantContractEvaluator::evaluate(
         &sanitized_lexical_input,
         &runtime_state.anti_spaghetti_directive,
     );
@@ -574,7 +574,7 @@ fn resolve_target_coordinate_and_blast(
 
 #[allow(clippy::too_many_arguments)]
 fn render_allowed_purify_payload(
-    simulation_receipt: &crate::domain::QuantumSimulationReceipt,
+    simulation_receipt: &crate::domain::ContractEvaluationReceipt,
     clarifier_options: Vec<crate::domain::ClarifierOption>,
     discovered_coords: Vec<crate::domain::DiscoveredCoordinate>,
     dense_ir_output: &str,
@@ -586,8 +586,9 @@ fn render_allowed_purify_payload(
     original_chars: usize,
 ) -> serde_json::Value {
     json!({
-        "verdict": "COLLAPSE_ALLOWED",
-        "fidelity": simulation_receipt.overall_fidelity,
+        "verdict": "DISPATCH_ALLOWED",
+        "compliance": simulation_receipt.overall_compliance,
+        "fidelity": simulation_receipt.overall_compliance,
         "branches": simulation_receipt.branches,
         "quick_fixes": simulation_receipt.quick_fixes,
         "clarifiers": clarifier_options,
@@ -634,7 +635,7 @@ fn compute_dense_ir_output(
 fn build_purified_simulation_response(
     purification_target_envelope: &PurifyRequestPayload,
     transpiled: &crate::domain::TranspiledIntent,
-    simulation_receipt: &crate::domain::QuantumSimulationReceipt,
+    simulation_receipt: &crate::domain::ContractEvaluationReceipt,
     stack_context: &crate::domain::ProjectStackContext,
     symbol_impact: Option<(
         crate::domain::SymbolNode,
@@ -643,7 +644,7 @@ fn build_purified_simulation_response(
     clarifier_options: Vec<crate::domain::ClarifierOption>,
     discovered_coords: Vec<crate::domain::DiscoveredCoordinate>,
 ) -> serde_json::Value {
-    if simulation_receipt.collapse_allowed {
+    if simulation_receipt.dispatch_allowed {
         let (target_coordinate, blast_consumers) = resolve_target_coordinate_and_blast(
             &symbol_impact,
             &discovered_coords,
@@ -657,10 +658,7 @@ fn build_purified_simulation_response(
             &blast_consumers,
         );
 
-        let hoare_contract_output = simulation_receipt
-            .hoare_contract_spec
-            .clone()
-            .unwrap_or_default();
+        let hoare_contract_output = simulation_receipt.contract_spec.clone().unwrap_or_default();
 
         let original_chars = purification_target_envelope.prompt.len();
         let concise_chars = transpiled.concise_english.len();
@@ -685,12 +683,13 @@ fn build_purified_simulation_response(
     } else {
         json!({
             "verdict": "HALT_INQUISITIVE",
-            "fidelity": simulation_receipt.overall_fidelity,
+            "compliance": simulation_receipt.overall_compliance,
+            "fidelity": simulation_receipt.overall_compliance,
             "branches": simulation_receipt.branches,
             "quick_fixes": simulation_receipt.quick_fixes,
             "clarifiers": clarifier_options,
             "discovered_coordinates": discovered_coords,
-            "message": "Quantum Superposition collapsed: Missing target coordinate or under-specified state transition.",
+            "message": "Contract evaluation halted: Missing target coordinate or under-specified state transition.",
         })
     }
 }

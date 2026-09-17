@@ -494,7 +494,7 @@ GK-ZERO มีกลไก enforce 3 ระดับ:
 
 | # | Bug | สถานะ | บันทึกการแก้ไข & หลักฐาน |
 |---|---|:---:|---|
-| **BUG-A** | `evaluate_branch_gamma_invariants()` hardcode `passed: true` | ✅ **RESOLVED** | แก้ไขให้ประเมิน `complexity_budget_valid && spans_bounded && generic_banned` จริงใน `quantum_simulator.rs` (เทสท์ผ่าน: `test_gamma_invariant_fails_when_directive_exceeded`) |
+| **BUG-A** | `evaluate_branch_gamma_invariants()` hardcode `passed: true` | ✅ **RESOLVED** | แก้ไขให้ประเมิน `complexity_budget_valid && spans_bounded && generic_banned` จริงใน `contract_evaluator.rs` (เทสท์ผ่าน: `test_gamma_invariant_fails_when_directive_exceeded`) |
 | **BUG-B** | Negation detector false positive: `"don't forget to add tests"` | ✅ **RESOLVED** | เพิ่มข้อยกเว้นวลี `"don't forget"` และ `"อย่าลืม"` ใน `linguistic_transpiler.rs` (เทสท์ผ่าน: `test_negation_exemption_dont_forget`) |
 | **BUG-C** | Token usage hardcode `42` prompt tokens | ✅ **RESOLVED** | เปลี่ยนเป็นคำนวณตามความยาวข้อความจริง `(content.len() / 6).max(12)` ใน `handlers.rs:L230` |
 | **BUG-D** | Symbol graph ไม่จับ `pub(crate) fn` | ✅ **RESOLVED** | รองรับ `pub(crate)` และ `pub(super)` ใน `symbol_graph.rs` พร้อมตัด comments และ export signatures (เทสท์ผ่าน: `test_parse_advanced_signatures_and_ignore_comments`) |

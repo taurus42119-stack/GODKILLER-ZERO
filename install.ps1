@@ -28,6 +28,23 @@ if (-not (Test-Path $ExePath)) {
     $DownloadUrl = "https://github.com/taurus42119-stack/godkiller-zero/releases/latest/download/godkiller-zero-windows-x86_64.zip"
     $ZipPath = "$env:TEMP\godkiller-zero.zip"
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
+
+    $ChecksumUrl = "https://github.com/taurus42119-stack/godkiller-zero/releases/latest/download/SHA256SUMS.txt"
+    try {
+        $ExpectedContent = (Invoke-WebRequest -Uri $ChecksumUrl -UseBasicParsing).Content.Trim()
+        $ExpectedHash = ($ExpectedContent -split '\s+')[0].Trim().ToUpper()
+        $ActualHash = (Get-FileHash $ZipPath -Algorithm SHA256).Hash.ToUpper()
+        if ($ActualHash -ne $ExpectedHash) {
+            Remove-Item $ZipPath -Force
+            throw "SHA256 mismatch — download may be corrupted or tampered. Expected: $ExpectedHash, Got: $ActualHash"
+        }
+        Write-Host "[OK] SHA256 verified: $ActualHash" -ForegroundColor Green
+    } catch [System.Management.Automation.RuntimeException] {
+        throw $_
+    } catch {
+        Write-Warning "Checksum file unavailable on remote release. Proceeding with caution: $_"
+    }
+
     Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
     Remove-Item $ZipPath -Force
 }

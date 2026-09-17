@@ -38,6 +38,7 @@ Thumbs.db
 
 # Build & Logs
 *.log
+SHA256SUMS.txt
 dist/
 node_modules/
 GODKILLER ZERO (BETA)/

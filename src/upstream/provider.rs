@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::domain::{
-    AntiSpaghettiDirective, AstDiscoveryEngine, LinguisticTranspiler, QuantumSuperpositionSimulator,
+    AntiSpaghettiDirective, AstDiscoveryEngine, InvariantContractEvaluator, LinguisticTranspiler,
 };
 use crate::upstream::bootstrap::{EngineStatus, OllamaBootstrapManager};
 
@@ -203,14 +203,12 @@ fn synthesize_real_preflight_contract(raw_query: &str) -> String {
     let (discovered_coords, clarifiers) =
         AstDiscoveryEngine::discover_coordinates_and_clarifications(raw_query, workspace_path);
 
-    let simulation_receipt = QuantumSuperpositionSimulator::simulate_superposition(
-        raw_query,
-        &AntiSpaghettiDirective::default(),
-    );
+    let simulation_receipt =
+        InvariantContractEvaluator::evaluate(raw_query, &AntiSpaghettiDirective::default());
 
     let contract_text = simulation_receipt
-        .hoare_contract_spec
-        .unwrap_or_else(|| "HOARE SPEC: Invariants Preserved".to_string());
+        .contract_spec
+        .unwrap_or_else(|| "INVARIANT CONTRACT: Invariants Preserved".to_string());
 
     let mut target_files_section = String::new();
     if discovered_coords.is_empty() {

@@ -1,5 +1,5 @@
 use godkiller_zero::domain::{
-    AntiSpaghettiDirective, HoareContract, QuantumSuperpositionSimulator, ZeroBridge,
+    AntiSpaghettiDirective, HoareContract, InvariantContractEvaluator, ZeroBridge,
 };
 use std::borrow::Cow;
 
@@ -26,19 +26,16 @@ fn test_hoare_contract_rendering() {
 }
 
 #[test]
-fn test_quantum_simulation_all_branches_pass() {
+fn test_contract_evaluation_all_branches_pass() {
     let directive = AntiSpaghettiDirective::default();
     let valid_intent = "แก้บั๊กใน src/components/ThemeToggle.tsx ปุ่มสลับธีมไม่ยอมเปลี่ยนคลาส dark";
 
-    let receipt = QuantumSuperpositionSimulator::simulate_superposition(valid_intent, &directive);
-    assert!(
-        receipt.collapse_allowed,
-        "Valid intent must allow quantum collapse"
-    );
+    let receipt = InvariantContractEvaluator::evaluate(valid_intent, &directive);
+    assert!(receipt.dispatch_allowed, "Valid intent must allow dispatch");
     assert_eq!(
         receipt.branches.len(),
         4,
-        "Must evaluate all 4 quantum branches"
+        "Must evaluate all 4 invariant branches"
     );
     assert!(
         receipt.branches[0].passed,
@@ -57,9 +54,7 @@ fn test_quantum_simulation_all_branches_pass() {
         "Branch Delta (Containment) must pass"
     );
 
-    let contract_text = receipt
-        .hoare_contract_spec
-        .expect("Contract must be synthesized");
+    let contract_text = receipt.contract_spec.expect("Contract must be synthesized");
     assert!(contract_text.contains("ThemeToggle.tsx"));
     assert!(contract_text.contains(
         "INVARIANT: IF UNDERSPECIFIED, NEVER GUESS. MUST TRIGGER INTERACTIVE CLARIFICATION."
@@ -67,33 +62,33 @@ fn test_quantum_simulation_all_branches_pass() {
 }
 
 #[test]
-fn test_quantum_simulation_missing_coordinate_anchors_domain_scope() {
+fn test_contract_evaluation_missing_coordinate_anchors_domain_scope() {
     let directive = AntiSpaghettiDirective::default();
     let natural_intent = "ช่วยแก้หน่อย สีปุ่มไม่สวยเลย";
 
-    let receipt = QuantumSuperpositionSimulator::simulate_superposition(natural_intent, &directive);
+    let receipt = InvariantContractEvaluator::evaluate(natural_intent, &directive);
     assert!(
-        receipt.collapse_allowed,
-        "Natural intent must allow collapse via domain-anchored scope"
+        receipt.dispatch_allowed,
+        "Natural intent must allow dispatch via domain-anchored scope"
     );
     assert!(
         receipt.branches[0].passed,
         "Branch Alpha must pass via domain scope fallback"
     );
     let contract = receipt
-        .hoare_contract_spec
-        .expect("Must emit Hoare contract with domain scope");
+        .contract_spec
+        .expect("Must emit contract with domain scope");
     assert!(contract.contains("Domain(About:"));
 }
 
 #[test]
-fn test_quantum_simulation_junk_drawer_guides_containment() {
+fn test_contract_evaluation_junk_drawer_guides_containment() {
     let directive = AntiSpaghettiDirective::default();
     let junk_intent = "สร้างฟังก์ชันใน src/utils/stringHelper.ts เพื่อแปลงค่า";
 
-    let receipt = QuantumSuperpositionSimulator::simulate_superposition(junk_intent, &directive);
+    let receipt = InvariantContractEvaluator::evaluate(junk_intent, &directive);
     assert!(
-        receipt.collapse_allowed,
+        receipt.dispatch_allowed,
         "Interpreter allows execution with silent guidance rather than police halt"
     );
     assert!(
@@ -132,9 +127,9 @@ fn test_exploratory_inquiry_bypasses_coordinate_requirement() {
     ];
 
     for prompt in inquiry_prompts {
-        let receipt = QuantumSuperpositionSimulator::simulate_superposition(prompt, &directive);
+        let receipt = InvariantContractEvaluator::evaluate(prompt, &directive);
         assert!(
-            receipt.collapse_allowed,
+            receipt.dispatch_allowed,
             "Conceptual inquiry '{}' must pass without demanding file coordinate",
             prompt
         );
@@ -142,9 +137,7 @@ fn test_exploratory_inquiry_bypasses_coordinate_requirement() {
             receipt.branches[0].passed,
             "Branch Alpha must pass for inquiry"
         );
-        let contract = receipt
-            .hoare_contract_spec
-            .expect("Contract should be generated");
+        let contract = receipt.contract_spec.expect("Contract should be generated");
         assert!(contract.contains("ConceptualArchitecture"));
     }
 }
@@ -168,10 +161,10 @@ fn test_multilanguage_coordinates_pass_branch_alpha() {
     ];
 
     for (intent, expected_coord) in multi_lang_intents {
-        let receipt = QuantumSuperpositionSimulator::simulate_superposition(intent, &directive);
+        let receipt = InvariantContractEvaluator::evaluate(intent, &directive);
         assert!(
-            receipt.collapse_allowed,
-            "Multi-language intent '{}' must allow collapse",
+            receipt.dispatch_allowed,
+            "Multi-language intent '{}' must allow dispatch",
             intent
         );
         assert!(
@@ -179,9 +172,7 @@ fn test_multilanguage_coordinates_pass_branch_alpha() {
             "Branch Alpha must pass for coordinate '{}'",
             expected_coord
         );
-        let contract = receipt
-            .hoare_contract_spec
-            .expect("Contract must be generated");
+        let contract = receipt.contract_spec.expect("Contract must be generated");
         assert!(
             contract.contains(expected_coord),
             "Contract must contain expected coordinate '{}'",
@@ -195,9 +186,9 @@ fn test_negative_mutation_dense_ir_generation() {
     let directive = AntiSpaghettiDirective::default();
     let negated_intent = "อย่าแก้ ThemeToggle.tsx แต่ให้คงเดิมไว้";
 
-    let receipt = QuantumSuperpositionSimulator::simulate_superposition(negated_intent, &directive);
-    assert!(receipt.collapse_allowed);
-    let dense_ir = receipt.dense_symbolic_ir_spec.expect("Dense IR must exist");
+    let receipt = InvariantContractEvaluator::evaluate(negated_intent, &directive);
+    assert!(receipt.dispatch_allowed);
+    let dense_ir = receipt.diagnostic_spec.expect("Diagnostic IR must exist");
     assert!(dense_ir.contains("[GK0:PRESERVE_GUARD]"));
     assert!(dense_ir.contains("NegativeMutationBounding:STRICT"));
     assert!(dense_ir.contains("PreserveUntouchedBitForBit"));
@@ -208,15 +199,13 @@ fn test_circuit_breaker_lockdown_on_looping_intent() {
     let directive = AntiSpaghettiDirective::default();
     let looping_intent = "ยังไม่ได้ พังเหมือนเดิม แก้ไม่หายสักที";
 
-    let receipt = QuantumSuperpositionSimulator::simulate_superposition(looping_intent, &directive);
+    let receipt = InvariantContractEvaluator::evaluate(looping_intent, &directive);
     assert!(
-        !receipt.collapse_allowed,
-        "Circuit breaker must halt collapse"
+        !receipt.dispatch_allowed,
+        "Circuit breaker must halt dispatch"
     );
-    assert_eq!(receipt.overall_fidelity, 0.0);
-    let breaker_spec = receipt
-        .dense_symbolic_ir_spec
-        .expect("Breaker IR must exist");
+    assert_eq!(receipt.overall_compliance, 0.0);
+    let breaker_spec = receipt.diagnostic_spec.expect("Breaker IR must exist");
     assert!(breaker_spec.contains("[GK0:DIAGNOSTIC_CIRCUIT_BREAKER]"));
     assert!(breaker_spec.contains("REPEATED_FAILURE_LOCKDOWN"));
 }
@@ -249,9 +238,11 @@ fn test_negation_exemption_dont_forget() {
 
 #[test]
 fn test_gamma_invariant_fails_when_directive_exceeded() {
-    let mut bad_directive = AntiSpaghettiDirective::default();
-    bad_directive.max_cyclomatic_complexity = 99; // Exceeds CC <= 7
-    let receipt = QuantumSuperpositionSimulator::simulate_superposition(
+    let bad_directive = AntiSpaghettiDirective {
+        max_cyclomatic_complexity: 99, // Exceeds CC <= 7
+        ..Default::default()
+    };
+    let receipt = InvariantContractEvaluator::evaluate(
         "แก้ปุ่มใน src/components/ThemeToggle.tsx",
         &bad_directive,
     );

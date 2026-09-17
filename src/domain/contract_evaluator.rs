@@ -26,32 +26,41 @@ pub struct QuickFixAction {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct QuantumBranchState {
+pub struct InvariantBranchResult {
     pub branch_identifier: String,
     pub passed: bool,
-    pub fidelity_score: f32,
+    #[serde(alias = "fidelity_score")]
+    pub compliance_score: f32,
     pub diagnostic_message: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct QuantumSimulationReceipt {
-    pub collapse_allowed: bool,
-    pub overall_fidelity: f32,
-    pub branches: Vec<QuantumBranchState>,
+pub struct ContractEvaluationReceipt {
+    #[serde(alias = "collapse_allowed")]
+    pub dispatch_allowed: bool,
+    #[serde(alias = "overall_fidelity")]
+    pub overall_compliance: f32,
+    pub branches: Vec<InvariantBranchResult>,
     pub quick_fixes: Vec<QuickFixAction>,
-    pub hoare_contract_spec: Option<String>,
-    pub dense_symbolic_ir_spec: Option<String>,
+    #[serde(alias = "hoare_contract_spec")]
+    pub contract_spec: Option<String>,
+    #[serde(alias = "dense_symbolic_ir_spec")]
+    pub diagnostic_spec: Option<String>,
     pub technical_action_summary: Option<String>,
 }
 
-pub struct QuantumSuperpositionSimulator;
+pub type QuantumBranchState = InvariantBranchResult;
+pub type QuantumSimulationReceipt = ContractEvaluationReceipt;
+pub type QuantumSuperpositionSimulator = InvariantContractEvaluator;
 
-impl QuantumSuperpositionSimulator {
+pub struct InvariantContractEvaluator;
+
+impl InvariantContractEvaluator {
     #[must_use]
-    pub fn simulate_superposition(
+    pub fn evaluate(
         lexical_intent: &str,
         directive: &AntiSpaghettiDirective,
-    ) -> QuantumSimulationReceipt {
+    ) -> ContractEvaluationReceipt {
         let trimmed_input = lexical_intent.trim();
         let target_candidate = Self::extract_coordinate_candidate(trimmed_input);
 
@@ -61,8 +70,8 @@ impl QuantumSuperpositionSimulator {
         let branch_delta = Self::evaluate_branch_delta_containment(trimmed_input);
 
         let branches = vec![branch_alpha, branch_beta, branch_gamma, branch_delta];
-        let average_fidelity: f32 =
-            branches.iter().map(|b| b.fidelity_score).sum::<f32>() / (branches.len() as f32);
+        let average_compliance: f32 =
+            branches.iter().map(|b| b.compliance_score).sum::<f32>() / (branches.len() as f32);
 
         let quick_fixes = Self::generate_coordinate_quick_fixes(trimmed_input);
         let coordinate_slice = Self::resolve_target_coordinate(target_candidate, trimmed_input);
@@ -74,20 +83,20 @@ impl QuantumSuperpositionSimulator {
                 &coordinate_slice,
                 trimmed_input,
             );
-            return QuantumSimulationReceipt {
-                collapse_allowed: false,
-                overall_fidelity: 0.0,
+            return ContractEvaluationReceipt {
+                dispatch_allowed: false,
+                overall_compliance: 0.0,
                 branches,
                 quick_fixes,
-                hoare_contract_spec: Some(breaker_spec.clone()),
-                dense_symbolic_ir_spec: Some(breaker_spec),
+                contract_spec: Some(breaker_spec.clone()),
+                diagnostic_spec: Some(breaker_spec),
                 technical_action_summary: Some(transpiled.technical_action_summary),
             };
         }
 
         let contract = Self::synthesize_contract(coordinate_slice.into(), trimmed_input, directive);
-        let hoare_contract_spec = Some(contract.render_hoare_specification());
-        let dense_symbolic_ir_spec = if transpiled.is_negated {
+        let contract_spec = Some(contract.render_hoare_specification());
+        let diagnostic_spec = if transpiled.is_negated {
             Some(
                 super::formal_contract::HoareContract::render_negation_dense_ir(
                     &contract.target_coordinate,
@@ -100,15 +109,23 @@ impl QuantumSuperpositionSimulator {
             Some(contract.render_dense_symbolic_ir(&transpiled.technical_action_summary))
         };
 
-        QuantumSimulationReceipt {
-            collapse_allowed: true,
-            overall_fidelity: average_fidelity,
+        ContractEvaluationReceipt {
+            dispatch_allowed: true,
+            overall_compliance: average_compliance,
             branches,
             quick_fixes,
-            hoare_contract_spec,
-            dense_symbolic_ir_spec,
+            contract_spec,
+            diagnostic_spec,
             technical_action_summary: Some(transpiled.technical_action_summary),
         }
+    }
+
+    #[inline]
+    pub fn simulate_superposition(
+        lexical_intent: &str,
+        directive: &AntiSpaghettiDirective,
+    ) -> ContractEvaluationReceipt {
+        Self::evaluate(lexical_intent, directive)
     }
 
     fn resolve_target_coordinate(target_candidate: Option<String>, trimmed_input: &str) -> String {
@@ -134,25 +151,25 @@ impl QuantumSuperpositionSimulator {
             .map(|m| m.as_str().to_string())
     }
 
-    fn evaluate_branch_alpha_coordinate(target_candidate: Option<&str>) -> QuantumBranchState {
+    fn evaluate_branch_alpha_coordinate(target_candidate: Option<&str>) -> InvariantBranchResult {
         match target_candidate {
-            Some(coord) => QuantumBranchState {
+            Some(coord) => InvariantBranchResult {
                 branch_identifier: "ALPHA_COORDINATE_SOUNDNESS".into(),
                 passed: true,
-                fidelity_score: 1.0,
+                compliance_score: 1.0,
                 diagnostic_message: format!("Target coordinate anchored: {}", coord),
             },
-            None => QuantumBranchState {
+            None => InvariantBranchResult {
                 branch_identifier: "ALPHA_COORDINATE_SOUNDNESS".into(),
                 passed: true,
-                fidelity_score: 0.95,
+                compliance_score: 0.95,
                 diagnostic_message:
                     "Target scope: Domain-anchored (Agent auto-discovers candidate files).".into(),
             },
         }
     }
 
-    fn evaluate_branch_beta_consistency(input: &str) -> QuantumBranchState {
+    fn evaluate_branch_beta_consistency(input: &str) -> InvariantBranchResult {
         let trimmed = input.trim();
         let is_empty = trimmed.is_empty();
         let has_control_chars = trimmed
@@ -160,7 +177,7 @@ impl QuantumSuperpositionSimulator {
             .any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t');
 
         let passed = !is_empty && !has_control_chars;
-        let fidelity_score = if passed { 1.0 } else { 0.0 };
+        let compliance_score = if passed { 1.0 } else { 0.0 };
 
         let diagnostic_message = if !passed {
             "Prompt input failed semantic consistency checks (empty or corrupt tokens).".into()
@@ -168,36 +185,38 @@ impl QuantumSuperpositionSimulator {
             "Post-condition intent verified for semantic compilation.".into()
         };
 
-        QuantumBranchState {
+        InvariantBranchResult {
             branch_identifier: "BETA_TRANSITION_CONSISTENCY".into(),
             passed,
-            fidelity_score,
+            compliance_score,
             diagnostic_message,
         }
     }
 
-    fn evaluate_branch_gamma_invariants(directive: &AntiSpaghettiDirective) -> QuantumBranchState {
+    fn evaluate_branch_gamma_invariants(
+        directive: &AntiSpaghettiDirective,
+    ) -> InvariantBranchResult {
         let complexity_budget_valid = directive.max_cyclomatic_complexity <= 7;
         let spans_bounded = directive.max_function_span_lines <= 70;
         let generic_banned = !directive.forbidden_generic_identifiers.is_empty();
 
         let passed = complexity_budget_valid && spans_bounded && generic_banned;
-        QuantumBranchState {
+        InvariantBranchResult {
             branch_identifier: "GAMMA_INVARIANT_BUDGET".into(),
             passed,
-            fidelity_score: if passed { 1.0 } else { 0.8 },
+            compliance_score: if passed { 1.0 } else { 0.8 },
             diagnostic_message:
                 "Invariants enforced: CC <= 7, MaxSpan <= 70, Generic Identifiers Banned.".into(),
         }
     }
 
-    fn evaluate_branch_delta_containment(input: &str) -> QuantumBranchState {
+    fn evaluate_branch_delta_containment(input: &str) -> InvariantBranchResult {
         let mentions_junk_drawer =
             input.contains("utils/") || input.contains("helpers/") || input.contains("common/");
-        QuantumBranchState {
+        InvariantBranchResult {
             branch_identifier: "DELTA_ARCHITECTURAL_CONTAINMENT".into(),
             passed: true,
-            fidelity_score: if mentions_junk_drawer { 0.9 } else { 1.0 },
+            compliance_score: if mentions_junk_drawer { 0.9 } else { 1.0 },
             diagnostic_message: if mentions_junk_drawer {
                 "Containment guidance: Redirecting logic away from utils/ or helpers/ junk drawers."
                     .into()

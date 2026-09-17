@@ -52,7 +52,7 @@ jobs:
           if (Test-Path assets/app.ico) { Copy-Item assets/app.ico -Destination staging/ }
           if (Test-Path assets/app.png) { Copy-Item assets/app.png -Destination staging/ }
           Compress-Archive -Path staging/* -DestinationPath ${{ matrix.archive_name }}
-          Get-FileHash -Algorithm SHA256 ${{ matrix.archive_name }} | Out-File -FilePath SHA256SUMS.txt
+          "$((Get-FileHash -Algorithm SHA256 ${{ matrix.archive_name }}).Hash)  ${{ matrix.archive_name }}" | Out-File -FilePath SHA256SUMS.txt -Encoding ascii
 
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
