@@ -885,16 +885,12 @@ echo "[GODKILLER ZERO] Inspecting staged codebase for architectural invariants..
 
 if command -v godkiller-console >/dev/null 2>&1; then
     EXE_CMD="godkiller-console"
-elif command -v godkiller-zero >/dev/null 2>&1; then
-    EXE_CMD="godkiller-zero"
 elif [ -f "./godkiller-console.exe" ]; then
     EXE_CMD="./godkiller-console.exe"
-elif [ -f "./godkiller-zero.exe" ]; then
-    EXE_CMD="./godkiller-zero.exe"
 elif [ -f "./target/release/godkiller-console.exe" ]; then
     EXE_CMD="./target/release/godkiller-console.exe"
-elif [ -f "./target/release/godkiller-zero.exe" ]; then
-    EXE_CMD="./target/release/godkiller-zero.exe"
+elif [ -f "./publish/godkiller-console.exe" ]; then
+    EXE_CMD="./publish/godkiller-console.exe"
 else
     EXE_CMD=""
 fi
@@ -914,7 +910,7 @@ if [ -n "$EXE_CMD" ]; then
         done
     fi
 else
-    echo "[WARN] [GODKILLER ZERO] Binary 'godkiller-zero' not found in PATH or project root, skipping pre-commit gate."
+    echo "[WARN] [GODKILLER ZERO] Binary 'godkiller-console' not found in PATH or project root, skipping pre-commit gate."
 fi
 
 exit 0
