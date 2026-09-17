@@ -39,7 +39,7 @@ public class ExtraSettingsForm : Form
 
         Text = "AI Power & Guardrails Suite";
         Icon = MainForm.CreateAppIcon();
-        Size = new Size(540, 790);
+        ClientSize = new Size(430, 750);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -64,7 +64,7 @@ public class ExtraSettingsForm : Form
         _cboCadence = new ComboBox
         {
             Location = new Point(16, top),
-            Size = new Size(485, 24),
+            Size = new Size(385, 24),
             DropDownStyle = ComboBoxStyle.DropDownList,
             BackColor = Color.FromArgb(28, 30, 36),
             ForeColor = Theme.TextTitle,
@@ -152,7 +152,7 @@ public class ExtraSettingsForm : Form
         {
             Text = "Save & Apply",
             Font = Theme.FontSemibold,
-            Size = new Size(120, 28),
+            Size = new Size(115, 28),
             Location = new Point(16, 8),
             BackColor = Color.FromArgb(0, 120, 215),
             ForeColor = Color.White,
@@ -171,8 +171,8 @@ public class ExtraSettingsForm : Form
         {
             Text = "Unhook IDE",
             Font = Theme.FontSemibold,
-            Size = new Size(110, 28),
-            Location = new Point(146, 8),
+            Size = new Size(105, 28),
+            Location = new Point(139, 8),
             BackColor = Color.FromArgb(127, 29, 29),
             ForeColor = Color.FromArgb(254, 202, 202),
             FlatStyle = FlatStyle.Flat,
@@ -189,8 +189,9 @@ public class ExtraSettingsForm : Form
         {
             Text = "Close",
             Font = Theme.FontRegular,
-            Size = new Size(90, 28),
-            Location = new Point(420, 8),
+            Size = new Size(80, 28),
+            Location = new Point(334, 8),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
             BackColor = Theme.BgTile,
             ForeColor = Theme.TextBody,
             FlatStyle = FlatStyle.Flat,
@@ -231,7 +232,7 @@ public class ExtraSettingsForm : Form
             Font = Theme.FontRegular,
             ForeColor = Theme.TextBody,
             Location = new Point(16, top),
-            Size = new Size(485, 22),
+            Size = new Size(385, 22),
             Cursor = Cursors.Hand
         };
         top += 25;
@@ -243,7 +244,7 @@ public class ExtraSettingsForm : Form
         var cbo = new ComboBox
         {
             Location = new Point(34, top),
-            Size = new Size(467, 24),
+            Size = new Size(367, 24),
             DropDownStyle = ComboBoxStyle.DropDownList,
             BackColor = Color.FromArgb(28, 30, 36),
             ForeColor = Theme.TextTitle,
