@@ -161,30 +161,32 @@ public static class HookEngine
         if (target == TargetEngine.Universal || target == TargetEngine.Cursor)
         {
             paths.Add(Path.Combine(userProfile, ".cursorrules"));
-            paths.Add(Path.Combine(currentDir, ".cursorrules"));
+            string localCursor = Path.Combine(currentDir, ".cursorrules");
+            if (File.Exists(localCursor) || Directory.Exists(Path.Combine(currentDir, ".cursor")))
+            {
+                paths.Add(localCursor);
+            }
         }
 
         if (target == TargetEngine.Universal || target == TargetEngine.ClaudeCode)
         {
             string claudeHome = Path.Combine(userProfile, ".claude");
-            if (!Directory.Exists(claudeHome))
-            {
-                try { Directory.CreateDirectory(claudeHome); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
-            }
             paths.Add(Path.Combine(claudeHome, "CLAUDE.md"));
-            paths.Add(Path.Combine(currentDir, "CLAUDE.md"));
+            string localClaude = Path.Combine(currentDir, "CLAUDE.md");
+            if (File.Exists(localClaude) || Directory.Exists(Path.Combine(currentDir, ".claude")))
+            {
+                paths.Add(localClaude);
+            }
         }
 
         if (target == TargetEngine.Universal || target == TargetEngine.VSCodeCopilot)
         {
             string githubDir = Path.Combine(currentDir, ".github");
-            if (!Directory.Exists(githubDir))
+            string copilotPath = Path.Combine(githubDir, "copilot-instructions.md");
+            if (Directory.Exists(githubDir) || File.Exists(copilotPath) || Directory.Exists(Path.Combine(currentDir, ".git")))
             {
-                try { Directory.CreateDirectory(githubDir); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+                paths.Add(copilotPath);
             }
-            paths.Add(Path.Combine(githubDir, "copilot-instructions.md"));
         }
 
         var unique = new System.Collections.Generic.List<string>();
@@ -484,30 +486,36 @@ public static class HookEngine
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string currentDir = Directory.GetCurrentDirectory();
         string workspace = ResolveActiveWorkspaceRoot();
-        string[] searchPaths = {
-            Path.Combine(workspace, "publish", "godkiller-zero.exe"),
-            Path.Combine(workspace, "target", "release", "godkiller-zero.exe"),
-            Path.Combine(workspace, "target", "debug", "godkiller-zero.exe"),
-            Path.Combine(workspace, "godkiller-zero.exe"),
-            Path.Combine(baseDir, "godkiller-zero.exe"),
-            Path.Combine(baseDir, "..", "godkiller-zero.exe"),
-            Path.Combine(baseDir, "..", "publish", "godkiller-zero.exe"),
-            Path.Combine(baseDir, "..", "..", "..", "..", "publish", "godkiller-zero.exe"),
-            Path.Combine(baseDir, "..", "..", "..", "..", "target", "release", "godkiller-zero.exe"),
-            Path.Combine(baseDir, "..", "..", "..", "..", "target", "debug", "godkiller-zero.exe"),
-            Path.Combine(currentDir, "publish", "godkiller-zero.exe"),
-            Path.Combine(currentDir, "target", "release", "godkiller-zero.exe"),
-            Path.Combine(currentDir, "target", "debug", "godkiller-zero.exe"),
-            Path.Combine(currentDir, "godkiller-zero.exe")
+        string[] binNames = { "godkiller-console.exe", "godkiller-zero.exe" };
+        string[] searchDirs = {
+            Path.Combine(workspace, "publish"),
+            Path.Combine(workspace, "target", "release"),
+            Path.Combine(workspace, "target", "debug"),
+            workspace,
+            baseDir,
+            Path.Combine(baseDir, ".."),
+            Path.Combine(baseDir, "..", "publish"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "publish"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "target", "release"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "target", "debug"),
+            Path.Combine(currentDir, "publish"),
+            Path.Combine(currentDir, "target", "release"),
+            Path.Combine(currentDir, "target", "debug"),
+            currentDir
         };
 
-        foreach (var exePath in searchPaths)
+        foreach (var name in binNames)
         {
-            if (File.Exists(exePath))
+            foreach (var dir in searchDirs)
             {
-                return Path.GetFullPath(exePath);
+                string exePath = Path.Combine(dir, name);
+                if (File.Exists(exePath))
+                {
+                    return Path.GetFullPath(exePath);
+                }
             }
         }
+
         return null;
     }
 
@@ -623,13 +631,17 @@ public static class HookEngine
 
         try
         {
+            int currentSessionId = System.Diagnostics.Process.GetCurrentProcess().SessionId;
             var processes = System.Diagnostics.Process.GetProcessesByName("godkiller-zero");
             foreach (var p in processes)
             {
                 try
                 {
-                    p.Kill();
-                    p.WaitForExit(300);
+                    if (p.SessionId == currentSessionId)
+                    {
+                        p.Kill();
+                        p.WaitForExit(300);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -671,9 +683,13 @@ public static class HookEngine
             }
 
             var servers = rootNode["mcpServers"]!.AsObject();
+            string mcpCommand = IsCommandInPath("godkiller-zero")
+                ? "godkiller-zero"
+                : (!string.IsNullOrEmpty(daemonExe) && File.Exists(daemonExe) ? Path.GetFullPath(daemonExe) : "godkiller-zero");
+
             var godkillerServer = new JsonObject
             {
-                ["command"] = daemonExe,
+                ["command"] = mcpCommand,
                 ["args"] = new JsonArray { "--mcp" }
             };
 
@@ -715,6 +731,28 @@ public static class HookEngine
         }
     }
 
+    private static bool IsCommandInPath(string command)
+    {
+        try
+        {
+            string? pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrEmpty(pathEnv)) return false;
+            string exeName = command.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? command : command + ".exe";
+            foreach (var dir in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (File.Exists(Path.Combine(dir.Trim(), exeName)))
+                {
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
+        return false;
+    }
+
     public static void EnsureBackgroundDaemon()
     {
         try
@@ -753,20 +791,40 @@ public static class HookEngine
                 Directory.CreateDirectory(dir);
             }
 
+            if (File.Exists(path))
+            {
+                try { File.Copy(path, path + ".bak", true); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+            }
+
             string existing = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
             string ruleBlock = GenerateRuleBlock(discipline, options);
 
-            string updated;
-            if (existing.Contains(MarkerStart) && existing.Contains(MarkerEnd))
+            string cleaned = existing;
+            while (cleaned.Contains(MarkerStart))
             {
-                int start = existing.IndexOf(MarkerStart, StringComparison.Ordinal);
-                int end = existing.IndexOf(MarkerEnd, StringComparison.Ordinal) + MarkerEnd.Length;
-                updated = existing.Substring(0, start) + ruleBlock + existing.Substring(end);
+                int start = cleaned.IndexOf(MarkerStart, StringComparison.Ordinal);
+                int end = cleaned.IndexOf(MarkerEnd, StringComparison.Ordinal);
+                if (start >= 0 && end > start)
+                {
+                    end += MarkerEnd.Length;
+                    cleaned = cleaned.Substring(0, start).TrimEnd() + "\n\n" + cleaned.Substring(end).TrimStart();
+                }
+                else if (start >= 0)
+                {
+                    int nextLine = cleaned.IndexOf('\n', start);
+                    cleaned = nextLine >= 0 ? cleaned.Substring(0, start) + cleaned.Substring(nextLine + 1) : cleaned.Substring(0, start);
+                }
+                else
+                {
+                    break;
+                }
             }
-            else
-            {
-                updated = existing.TrimEnd() + "\n\n" + ruleBlock + "\n";
-            }
+
+            cleaned = cleaned.Trim();
+            string updated = string.IsNullOrEmpty(cleaned)
+                ? ruleBlock + "\n"
+                : cleaned + "\n\n" + ruleBlock + "\n";
 
             File.WriteAllText(path, updated, Encoding.UTF8);
             return true;
@@ -786,27 +844,34 @@ public static class HookEngine
             string existing = File.ReadAllText(path);
             if (!existing.Contains(MarkerStart)) return true;
 
-            int start = existing.IndexOf(MarkerStart, StringComparison.Ordinal);
-            int end = existing.IndexOf(MarkerEnd, StringComparison.Ordinal);
-            if (start >= 0 && end > start)
+            string text = existing;
+            bool modified = false;
+            while (text.Contains(MarkerStart))
             {
-                end += MarkerEnd.Length;
-                string clean = existing.Substring(0, start).TrimEnd() + "\n" + existing.Substring(end).TrimStart();
-                string trimmed = clean.Trim();
-                if (string.IsNullOrEmpty(trimmed))
+                int start = text.IndexOf(MarkerStart, StringComparison.Ordinal);
+                int end = text.IndexOf(MarkerEnd, StringComparison.Ordinal);
+                if (start >= 0 && end > start)
                 {
-                    string fileName = Path.GetFileName(path).ToLowerInvariant();
-                    if (fileName == ".cursorrules" || fileName == "claude.md" || fileName == "copilot-instructions.md")
-                    {
-                        File.Delete(path);
-                        return true;
-                    }
-                    File.WriteAllText(path, string.Empty, Encoding.UTF8);
+                    end += MarkerEnd.Length;
+                    text = text.Substring(0, start).TrimEnd() + "\n" + text.Substring(end).TrimStart();
+                    modified = true;
+                }
+                else if (start >= 0)
+                {
+                    int nextLine = text.IndexOf('\n', start);
+                    text = nextLine >= 0 ? text.Substring(0, start) + text.Substring(nextLine + 1) : text.Substring(0, start);
+                    modified = true;
                 }
                 else
                 {
-                    File.WriteAllText(path, trimmed + "\n", Encoding.UTF8);
+                    break;
                 }
+            }
+
+            if (modified)
+            {
+                string trimmed = text.Trim();
+                File.WriteAllText(path, string.IsNullOrEmpty(trimmed) ? string.Empty : trimmed + "\n", Encoding.UTF8);
             }
 
             return true;

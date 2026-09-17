@@ -1,16 +1,16 @@
+use super::ast_engine::AstEngine;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
-use super::ast_engine::AstEngine;
 
 static BANNED_IDENTIFIER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
-        r"(?i)\b(?:const|let|var)\s+(?:mut\s+)?(data|res|req|item|val|temp|obj|info|payload|result)\b|",
+        r"(?i)\b(?:const|let|var)\s+(?:mut\s+)?(data|res|req|item|val|temp|obj|tmp)\b\s*(?:[:=;,]|$)|",
         r"(?i)\bfunction\s+(handleData|processData|doAction)\b|",
-        r"(?i)(?:^|[^.\w$])(data|res|req|item|val|temp|obj|info|payload|result)(?:\s*,\s*\w+)*\s*(?::=|=)\s*[^=]|",
-        r"(?i)\((?:\s*|\w+\s*,\s*)(payload|val|temp)\s*(?::|,|\))"
+        r"(?i)(?:^|[^.\w$])(data|res|req|item|val|temp|obj|tmp)(?:\s*,\s*\w+)*\s*(?::=|=)\s*[^=]|",
+        r"(?i)\((?:\s*|\w+\s*,\s*)(val|temp|tmp)\s*(?::|,|\))"
     ))
     .expect("Valid banned identifier regex")
 });
@@ -64,12 +64,12 @@ impl GatekeeperScanner {
         let passed = violations.is_empty();
         let summary_message = if passed {
             format!(
-                "✓ [GATEKEEPER PASS] Scanned {} files. Zero invariant violations detected.",
+                "[OK] [GATEKEEPER PASS] Scanned {} files. Zero invariant violations detected.",
                 total_files
             )
         } else {
             format!(
-                "❌ [GATEKEEPER REJECT] {} violations detected across {} files.",
+                "[FAIL] [GATEKEEPER REJECT] {} violations detected across {} files.",
                 violations.len(),
                 total_files
             )
@@ -203,6 +203,27 @@ impl GatekeeperScanner {
         }
     }
 
+    fn is_empty_catch_multiline(lines: &[&str], mut next_idx: usize) -> bool {
+        while next_idx < lines.len() && lines[next_idx].trim().is_empty() {
+            next_idx += 1;
+        }
+        if next_idx >= lines.len() {
+            return false;
+        }
+        let next_line = lines[next_idx].trim();
+        if next_line == "{}" || next_line == "{ }" {
+            return true;
+        }
+        if next_line != "{" {
+            return false;
+        }
+        let mut after_open = next_idx + 1;
+        while after_open < lines.len() && lines[after_open].trim().is_empty() {
+            after_open += 1;
+        }
+        after_open < lines.len() && lines[after_open].trim() == "}"
+    }
+
     fn is_empty_catch_block(stripped: &str, index: usize, lines: &[&str]) -> bool {
         let is_catch_start = stripped.starts_with("catch")
             || stripped.contains(" catch ")
@@ -217,30 +238,10 @@ impl GatekeeperScanner {
             return true;
         }
 
-        let mut next_idx = index + 1;
-        while next_idx < lines.len() && lines[next_idx].trim().is_empty() {
-            next_idx += 1;
-        }
-
-        if next_idx < lines.len() {
-            let next_line = lines[next_idx].trim();
-            if next_line == "{}" || next_line == "{ }" {
-                return true;
-            }
-            if next_line == "{" {
-                let mut after_open = next_idx + 1;
-                while after_open < lines.len() && lines[after_open].trim().is_empty() {
-                    after_open += 1;
-                }
-                if after_open < lines.len() && lines[after_open].trim() == "}" {
-                    return true;
-                }
-            }
-        }
-
-        false
+        Self::is_empty_catch_multiline(lines, index + 1)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn check_python_and_js_stubs(
         stripped: &str,
         trimmed: &str,
@@ -252,16 +253,17 @@ impl GatekeeperScanner {
         violations: &mut Vec<GatekeeperViolation>,
     ) {
         if ext == "py" {
-            if stripped == "except:" || stripped.starts_with("except ") {
-                if stripped.ends_with("pass") || (index + 1 < lines.len() && lines[index + 1].trim() == "pass") {
-                    violations.push(GatekeeperViolation {
-                        file_path: path_string.to_string(),
-                        line_number: line_num,
-                        rule_identifier: "RULE_12_NO_SILENT_CATCH".into(),
-                        description: "Forbidden silent error suppression ('except: pass'). Handle or log errors explicitly.".into(),
-                        snippet: trimmed.to_string(),
-                    });
-                }
+            if (stripped == "except:" || stripped.starts_with("except "))
+                && (stripped.ends_with("pass")
+                    || (index + 1 < lines.len() && lines[index + 1].trim() == "pass"))
+            {
+                violations.push(GatekeeperViolation {
+                    file_path: path_string.to_string(),
+                    line_number: line_num,
+                    rule_identifier: "RULE_12_NO_SILENT_CATCH".into(),
+                    description: "Forbidden silent error suppression ('except: pass'). Handle or log errors explicitly.".into(),
+                    snippet: trimmed.to_string(),
+                });
             }
             if stripped.contains("raise NotImplementedError") {
                 violations.push(GatekeeperViolation {
@@ -274,7 +276,9 @@ impl GatekeeperScanner {
             }
         }
 
-        if matches!(ext, "ts" | "tsx" | "js" | "jsx") && Self::is_empty_catch_block(stripped, index, lines) {
+        if matches!(ext, "js" | "jsx" | "ts" | "tsx")
+            && Self::is_empty_catch_block(stripped, index, lines)
+        {
             violations.push(GatekeeperViolation {
                 file_path: path_string.to_string(),
                 line_number: line_num,
@@ -285,6 +289,7 @@ impl GatekeeperScanner {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn check_compiled_lang_hygiene(
         stripped: &str,
         trimmed: &str,
@@ -303,7 +308,8 @@ impl GatekeeperScanner {
                     file_path: path_string.to_string(),
                     line_number: line_num,
                     rule_identifier: "RULE_12_ANTI_LAZY_STUBS".into(),
-                    description: "Forbidden NotImplementedException stub in production code.".into(),
+                    description: "Forbidden NotImplementedException stub in production code."
+                        .into(),
                     snippet: trimmed.to_string(),
                 });
             }
@@ -318,19 +324,56 @@ impl GatekeeperScanner {
             }
         }
 
-        if ext == "rs" && !is_test_file && !in_test_module {
-            if (stripped.contains(".unwrap()") || stripped.contains(".expect("))
-                && !path_string.contains("gatekeeper.rs")
-                && !path_string.contains("test")
-            {
-                violations.push(GatekeeperViolation {
-                    file_path: path_string.to_string(),
-                    line_number: line_num,
-                    rule_identifier: "RULE_12_EXHAUSTIVE_ERROR_HANDLING".into(),
-                    description: "Forbidden unchecked unwrap()/expect() in production Rust code. Use Result<T, E> and '?' operator.".into(),
-                    snippet: trimmed.to_string(),
-                });
-            }
+        if ext == "rs"
+            && !is_test_file
+            && !in_test_module
+            && (stripped.contains(".unwrap()") || stripped.contains(".expect("))
+            && !path_string.ends_with("gatekeeper.rs")
+        {
+            violations.push(GatekeeperViolation {
+                file_path: path_string.to_string(),
+                line_number: line_num,
+                rule_identifier: "RULE_12_EXHAUSTIVE_ERROR_HANDLING".into(),
+                description: "Forbidden unchecked unwrap()/expect() in production Rust code. Use Result<T, E> and '?' operator.".into(),
+                snippet: trimmed.to_string(),
+            });
+        }
+    }
+
+    fn is_test_file_path_str(path: &str) -> bool {
+        let normalized = path.replace('\\', "/");
+        normalized.contains("/tests/")
+            || normalized.starts_with("tests/")
+            || normalized.starts_with("./tests/")
+            || normalized.contains("/test/")
+            || normalized.contains("/fixtures/")
+            || normalized.ends_with("_test.rs")
+            || normalized.ends_with(".test.ts")
+            || normalized.ends_with(".spec.ts")
+            || normalized.ends_with(".test.js")
+            || normalized.ends_with(".spec.js")
+            || normalized.contains("/test_")
+    }
+
+    fn check_macro_stubs(
+        stripped: &str,
+        trimmed: &str,
+        path_string: &str,
+        line_num: usize,
+        violations: &mut Vec<GatekeeperViolation>,
+    ) {
+        if (stripped.contains("todo!()") || stripped.contains("unimplemented!()"))
+            && !stripped.contains("RULE_12")
+            && !stripped.contains("FORBIDDEN")
+        {
+            violations.push(GatekeeperViolation {
+                file_path: path_string.to_string(),
+                line_number: line_num,
+                rule_identifier: "RULE_12_ANTI_LAZY_STUBS".into(),
+                description: "Forbidden lazy stub macro in active code (todo! / unimplemented!)."
+                    .into(),
+                snippet: trimmed.to_string(),
+            });
         }
     }
 
@@ -340,53 +383,53 @@ impl GatekeeperScanner {
         ext: &str,
         violations: &mut Vec<GatekeeperViolation>,
     ) {
-        let is_test_file = path_string.contains("/tests/")
-            || path_string.starts_with("tests/")
-            || path_string.starts_with("./tests/")
-            || path_string.contains("/test/")
-            || path_string.contains("/fixtures/")
-            || path_string.ends_with("_test.rs")
-            || path_string.ends_with(".test.ts")
-            || path_string.ends_with(".spec.ts")
-            || path_string.ends_with(".test.js")
-            || path_string.ends_with(".spec.js")
-            || path_string.contains("/test_");
-
+        let is_test_file = Self::is_test_file_path_str(path_string);
         let mut in_test_module = false;
 
         for (index, line) in lines.iter().enumerate() {
             let line_num = index + 1;
             let trimmed = line.trim();
 
-            if ext == "rs" && (trimmed.starts_with("#[cfg(test)]") || trimmed.starts_with("mod test") || trimmed.starts_with("mod tests")) {
+            if ext == "rs"
+                && (trimmed.starts_with("#[cfg(test)]")
+                    || trimmed.starts_with("mod test")
+                    || trimmed.starts_with("mod tests"))
+            {
                 in_test_module = true;
             }
 
-            if trimmed.starts_with("//") || trimmed.starts_with('#') || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+            if trimmed.starts_with("//")
+                || trimmed.starts_with('#')
+                || trimmed.starts_with("/*")
+                || trimmed.starts_with('*')
+            {
                 Self::check_comment_stubs(trimmed, path_string, line_num, violations);
                 continue;
             }
 
             let stripped = Self::strip_comments_and_strings(trimmed);
-
-            if (stripped.contains("todo!()") || stripped.contains("unimplemented!()"))
-                && !stripped.contains("RULE_12")
-                && !stripped.contains("FORBIDDEN")
-            {
-                violations.push(GatekeeperViolation {
-                    file_path: path_string.to_string(),
-                    line_number: line_num,
-                    rule_identifier: "RULE_12_ANTI_LAZY_STUBS".into(),
-                    description: "Forbidden lazy stub macro in active code (todo! / unimplemented!).".into(),
-                    snippet: trimmed.to_string(),
-                });
-            }
-
+            Self::check_macro_stubs(&stripped, trimmed, path_string, line_num, violations);
             Self::check_python_and_js_stubs(
-                &stripped, trimmed, path_string, ext, line_num, index, lines, violations,
+                &stripped,
+                trimmed,
+                path_string,
+                ext,
+                line_num,
+                index,
+                lines,
+                violations,
             );
             Self::check_compiled_lang_hygiene(
-                &stripped, trimmed, path_string, ext, line_num, index, lines, in_test_module, is_test_file, violations,
+                &stripped,
+                trimmed,
+                path_string,
+                ext,
+                line_num,
+                index,
+                lines,
+                in_test_module,
+                is_test_file,
+                violations,
             );
         }
     }
@@ -420,47 +463,120 @@ impl GatekeeperScanner {
         max_complexity: usize,
     ) -> Vec<GatekeeperViolation> {
         let path = Path::new(file_path);
-        let joined_content = lines.join("\n");
-        if AstEngine::is_supported_file(path) {
-            if let Some(report) = AstEngine::parse_file(path, &joined_content) {
-                let mut violations = Vec::new();
-                for function in report.functions {
-                    if function.is_exempt {
-                        continue;
-                    }
-                    if function.span_lines > max_span {
-                        violations.push(GatekeeperViolation {
-                            file_path: file_path.to_string(),
-                            line_number: function.start_line,
-                            rule_identifier: "RULE_4_MAX_FUNCTION_SPAN".into(),
-                            description: format!(
-                                "Function exceeds span budget: {} lines (max: {})",
-                                function.span_lines, max_span
-                            ),
-                            snippet: function.function_name.clone(),
-                        });
-                    }
-                    if function.cognitive_complexity > max_complexity {
-                        violations.push(GatekeeperViolation {
-                            file_path: file_path.to_string(),
-                            line_number: function.start_line,
-                            rule_identifier: "RULE_3_MAX_COGNITIVE_COMPLEXITY".into(),
-                            description: format!(
-                                "Function exceeds cognitive complexity budget: {} (max: {})",
-                                function.cognitive_complexity, max_complexity
-                            ),
-                            snippet: function.function_name.clone(),
-                        });
-                    }
-                }
-                return violations;
-            }
+        if !AstEngine::is_supported_file(path) {
+            return Self::check_unsupported_spans(lines, file_path, max_span);
         }
 
-        if file_path.ends_with(".py") {
-            return Self::check_python_function_spans(lines, file_path, max_span);
+        let joined_content = lines.join("\n");
+        let Some(report) = AstEngine::parse_file(path, &joined_content) else {
+            return Vec::new();
+        };
+
+        let mut violations = Vec::new();
+        for function in &report.functions {
+            Self::check_single_function_metric(
+                function,
+                file_path,
+                max_span,
+                max_complexity,
+                &mut violations,
+            );
         }
-        Self::check_brace_function_spans(lines, file_path, max_span)
+        violations
+    }
+
+    fn check_unsupported_spans(
+        lines: &[&str],
+        file_path: &str,
+        max_span: usize,
+    ) -> Vec<GatekeeperViolation> {
+        if file_path.ends_with(".py") {
+            Self::check_python_function_spans(lines, file_path, max_span)
+        } else {
+            Self::check_brace_function_spans(lines, file_path, max_span)
+        }
+    }
+
+    fn check_single_function_metric(
+        function: &crate::domain::ast_engine::AstFunctionMetrics,
+        file_path: &str,
+        max_span: usize,
+        max_complexity: usize,
+        violations: &mut Vec<GatekeeperViolation>,
+    ) {
+        if function.is_exempt {
+            return;
+        }
+        if function.span_lines > max_span {
+            violations.push(GatekeeperViolation {
+                file_path: file_path.to_string(),
+                line_number: function.start_line,
+                rule_identifier: "RULE_4_MAX_FUNCTION_SPAN".into(),
+                description: format!(
+                    "Function exceeds span budget: {} lines (max: {})",
+                    function.span_lines, max_span
+                ),
+                snippet: function.function_name.clone(),
+            });
+        }
+        if function.cognitive_complexity > max_complexity {
+            violations.push(GatekeeperViolation {
+                file_path: file_path.to_string(),
+                line_number: function.start_line,
+                rule_identifier: "RULE_3_MAX_COGNITIVE_COMPLEXITY".into(),
+                description: format!(
+                    "Function exceeds cognitive complexity budget: {} (max: {})",
+                    function.cognitive_complexity, max_complexity
+                ),
+                snippet: function.function_name.clone(),
+            });
+        }
+    }
+
+    fn process_python_line(
+        line: &str,
+        line_num: usize,
+        current_fn: &mut Option<(usize, usize, String)>,
+        violations: &mut Vec<GatekeeperViolation>,
+        file_path: &str,
+        max_span: usize,
+        fn_start_pattern: &Regex,
+    ) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            return;
+        }
+
+        let current_indent = line.len() - line.trim_start().len();
+        if let Some(captures) = fn_start_pattern.captures(line) {
+            if let Some((start_line, _, prev_fn)) = current_fn.take() {
+                Self::push_span_violation(
+                    violations,
+                    file_path,
+                    start_line,
+                    line_num - start_line,
+                    max_span,
+                    &prev_fn,
+                );
+            }
+            let fn_name = captures.get(1).map(|m| m.as_str()).unwrap_or("fn");
+            *current_fn = Some((line_num, current_indent, fn_name.to_string()));
+            return;
+        }
+
+        if let Some((start_line, base_indent, ref fn_name)) = *current_fn {
+            if current_indent <= base_indent {
+                Self::push_span_violation(
+                    violations,
+                    file_path,
+                    start_line,
+                    line_num - start_line,
+                    max_span,
+                    fn_name,
+                );
+                *current_fn = None;
+            }
+        }
     }
 
     fn check_python_function_spans(
@@ -469,50 +585,21 @@ impl GatekeeperScanner {
         max_span: usize,
     ) -> Vec<GatekeeperViolation> {
         let mut violations = Vec::new();
-        let fn_start_pattern =
-            Regex::new(r"^(?:\s*)(?:async\s+)?def\s+([a-zA-Z0-9_]+)\s*\(").expect("Valid py def regex");
+        let fn_start_pattern = Regex::new(r"^(?:\s*)(?:async\s+)?def\s+([a-zA-Z0-9_]+)\s*\(")
+            .expect("Valid py def regex");
 
         let mut current_fn: Option<(usize, usize, String)> = None;
 
         for (idx, line) in lines.iter().enumerate() {
-            let line_num = idx + 1;
-            let trimmed = line.trim();
-
-            if trimmed.is_empty() || trimmed.starts_with('#') {
-                continue;
-            }
-
-            let current_indent = line.len() - line.trim_start().len();
-
-            if let Some(captures) = fn_start_pattern.captures(line) {
-                if let Some((start_line, _, ref prev_fn)) = current_fn {
-                    Self::push_span_violation(
-                        &mut violations,
-                        file_path,
-                        start_line,
-                        line_num - start_line,
-                        max_span,
-                        prev_fn,
-                    );
-                }
-                let fn_name = captures.get(1).map(|m| m.as_str()).unwrap_or("fn");
-                current_fn = Some((line_num, current_indent, fn_name.to_string()));
-                continue;
-            }
-
-            if let Some((start_line, base_indent, ref fn_name)) = current_fn {
-                if current_indent <= base_indent {
-                    Self::push_span_violation(
-                        &mut violations,
-                        file_path,
-                        start_line,
-                        line_num - start_line,
-                        max_span,
-                        fn_name,
-                    );
-                    current_fn = None;
-                }
-            }
+            Self::process_python_line(
+                line,
+                idx + 1,
+                &mut current_fn,
+                &mut violations,
+                file_path,
+                max_span,
+                &fn_start_pattern,
+            );
         }
 
         if let Some((start_line, _, ref fn_name)) = current_fn {
@@ -529,6 +616,7 @@ impl GatekeeperScanner {
         violations
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn detect_brace_fn_start(
         trimmed: &str,
         sanitized: &str,
@@ -537,23 +625,37 @@ impl GatekeeperScanner {
         current_fn_start: &mut Option<(usize, String)>,
         pending_fn: &mut Option<(usize, String)>,
         brace_depth: &mut i32,
-        pattern: &Regex,
+        fn_start_pattern: &Regex,
     ) {
-        if let Some((start_line, name)) = pending_fn.take() {
+        if let Some((pend_line, ref pend_name)) = pending_fn {
             if sanitized.contains('{') {
-                *current_fn_start = Some((start_line, name));
+                *current_fn_start = Some((*pend_line, pend_name.clone()));
                 *brace_depth = 0;
-            } else if idx - start_line <= 2 {
-                *pending_fn = Some((start_line, name));
+                *pending_fn = None;
             }
-        } else if pattern.is_match(trimmed) {
+        } else if fn_start_pattern.is_match(trimmed) && !trimmed.contains(';') {
+            let fn_name = Self::extract_fn_name(trimmed, idx);
             if sanitized.contains('{') {
-                *current_fn_start = Some((line_num, trimmed.to_string()));
+                *current_fn_start = Some((line_num, fn_name));
                 *brace_depth = 0;
             } else {
-                *pending_fn = Some((line_num, trimmed.to_string()));
+                *pending_fn = Some((line_num, fn_name));
             }
         }
+    }
+
+    fn extract_fn_name(trimmed: &str, _idx: usize) -> String {
+        if let Some(pos) = trimmed.find("fn ") {
+            let rest = &trimmed[pos + 3..];
+            let name: String = rest
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            if !name.is_empty() {
+                return name;
+            }
+        }
+        trimmed.to_string()
     }
 
     fn update_brace_depth(
@@ -565,28 +667,88 @@ impl GatekeeperScanner {
         line_num: usize,
         max_span: usize,
     ) {
-        if let Some((start_line, ref fn_name)) = current_fn_start {
-            for ch in sanitized.chars() {
-                if ch == '{' {
-                    *brace_depth += 1;
-                } else if ch == '}' {
-                    *brace_depth -= 1;
-                    if *brace_depth <= 0 {
-                        Self::push_span_violation(
-                            violations,
-                            file_path,
-                            *start_line,
-                            line_num - *start_line + 1,
-                            max_span,
-                            fn_name,
-                        );
-                        *current_fn_start = None;
-                        *brace_depth = 0;
-                        break;
-                    }
+        let Some((start_line, ref fn_name)) = current_fn_start else {
+            return;
+        };
+
+        for ch in sanitized.chars() {
+            if ch == '{' {
+                *brace_depth += 1;
+            } else if ch == '}' {
+                *brace_depth -= 1;
+                if *brace_depth <= 0 {
+                    Self::push_span_violation(
+                        violations,
+                        file_path,
+                        *start_line,
+                        line_num - *start_line + 1,
+                        max_span,
+                        fn_name,
+                    );
+                    *current_fn_start = None;
+                    *brace_depth = 0;
+                    break;
                 }
             }
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn process_brace_line(
+        line: &str,
+        idx: usize,
+        line_num: usize,
+        in_raw_string: &mut bool,
+        current_fn_start: &mut Option<(usize, String)>,
+        pending_fn: &mut Option<(usize, String)>,
+        brace_depth: &mut i32,
+        violations: &mut Vec<GatekeeperViolation>,
+        file_path: &str,
+        max_span: usize,
+        fn_start_pattern: &Regex,
+    ) {
+        let trimmed = line.trim();
+
+        if *in_raw_string {
+            *in_raw_string = !trimmed.contains("\"#");
+            return;
+        }
+
+        if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+            return;
+        }
+
+        if (trimmed.contains("r#\"") || trimmed.contains("r##\"")) && !trimmed.contains("\"#") {
+            *in_raw_string = true;
+        }
+
+        let sanitized = Self::strip_comments_and_strings(line);
+
+        if current_fn_start.is_none() {
+            Self::detect_brace_fn_start(
+                trimmed,
+                &sanitized,
+                line_num,
+                idx,
+                current_fn_start,
+                pending_fn,
+                brace_depth,
+                fn_start_pattern,
+            );
+            if current_fn_start.is_none() && pending_fn.is_some() {
+                return;
+            }
+        }
+
+        Self::update_brace_depth(
+            &sanitized,
+            current_fn_start,
+            brace_depth,
+            violations,
+            file_path,
+            line_num,
+            max_span,
+        );
     }
 
     fn check_brace_function_spans(
@@ -605,54 +767,42 @@ impl GatekeeperScanner {
         let mut in_raw_string = false;
 
         for (idx, line) in lines.iter().enumerate() {
-            let line_num = idx + 1;
-            let trimmed = line.trim();
-
-            if in_raw_string {
-                if trimmed.contains("\"#") {
-                    in_raw_string = false;
-                }
-                continue;
-            }
-
-            if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
-                continue;
-            }
-
-            if (trimmed.contains("r#\"") || trimmed.contains("r##\"")) && !trimmed.contains("\"#") {
-                in_raw_string = true;
-            }
-
-            let sanitized = Self::strip_comments_and_strings(line);
-
-            if current_fn_start.is_none() {
-                Self::detect_brace_fn_start(
-                    trimmed,
-                    &sanitized,
-                    line_num,
-                    idx,
-                    &mut current_fn_start,
-                    &mut pending_fn,
-                    &mut brace_depth,
-                    &fn_start_pattern,
-                );
-                if current_fn_start.is_none() && pending_fn.is_some() {
-                    continue;
-                }
-            }
-
-            Self::update_brace_depth(
-                &sanitized,
+            Self::process_brace_line(
+                line,
+                idx,
+                idx + 1,
+                &mut in_raw_string,
                 &mut current_fn_start,
+                &mut pending_fn,
                 &mut brace_depth,
                 &mut violations,
                 file_path,
-                line_num,
                 max_span,
+                &fn_start_pattern,
             );
         }
 
         violations
+    }
+
+    fn step_strip_char(
+        ch: char,
+        prev_char: char,
+        in_quote: &mut Option<char>,
+        char_accumulator: &mut String,
+    ) {
+        if let Some(q) = *in_quote {
+            if ch == q && prev_char != '\\' {
+                *in_quote = None;
+            }
+            return;
+        }
+
+        if (ch == '"' || ch == '\'' || ch == '`') && prev_char != '\\' {
+            *in_quote = Some(ch);
+        } else {
+            char_accumulator.push(ch);
+        }
     }
 
     fn strip_comments_and_strings(line: &str) -> String {
@@ -665,46 +815,110 @@ impl GatekeeperScanner {
             if in_quote.is_none() && ch == '/' && chars.peek() == Some(&'/') {
                 break;
             }
-
-            if let Some(q) = in_quote {
-                if ch == q && prev_char != '\\' {
-                    in_quote = None;
-                }
-            } else if (ch == '"' || ch == '\'' || ch == '`') && prev_char != '\\' {
-                in_quote = Some(ch);
-            } else {
-                char_accumulator.push(ch);
-            }
+            Self::step_strip_char(ch, prev_char, &mut in_quote, &mut char_accumulator);
             prev_char = ch;
         }
 
         char_accumulator
     }
 
+    fn is_ignored_directory_entry(file_name: &str) -> bool {
+        file_name.starts_with('.')
+            || file_name == "target"
+            || file_name == "node_modules"
+            || file_name == "dist"
+            || file_name == "bin"
+            || file_name == "obj"
+            || file_name == "publish"
+            || file_name.ends_with("(BETA)")
+    }
+
+    fn process_walk_entry(
+        path: PathBuf,
+        current_depth: usize,
+        max_depth: usize,
+        callback: &mut dyn FnMut(&Path),
+    ) {
+        let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+        if Self::is_ignored_directory_entry(file_name) {
+            return;
+        }
+        if fs::symlink_metadata(&path)
+            .map(|m| m.is_symlink())
+            .unwrap_or(false)
+        {
+            return;
+        }
+        if path.is_dir() {
+            Self::walk_directory_bounded(&path, current_depth + 1, max_depth, callback);
+        } else if path.is_file() {
+            callback(&path);
+        }
+    }
+
     fn walk_directory(dir: &Path, callback: &mut dyn FnMut(&Path)) {
+        Self::walk_directory_bounded(dir, 0, 32, callback);
+    }
+
+    fn walk_directory_bounded(
+        dir: &Path,
+        current_depth: usize,
+        max_depth: usize,
+        callback: &mut dyn FnMut(&Path),
+    ) {
+        if current_depth > max_depth {
+            return;
+        }
+
         let Ok(entries) = fs::read_dir(dir) else {
             return;
         };
 
         for entry in entries.flatten() {
-            let path = entry.path();
-            let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-
-            if file_name.starts_with('.')
-                || file_name == "target"
-                || file_name == "node_modules"
-                || file_name == "dist"
-            {
-                continue;
-            }
-
-            if path.is_dir() {
-                Self::walk_directory(&path, callback);
-            } else if path.is_file() {
-                callback(&path);
-            }
+            Self::process_walk_entry(entry.path(), current_depth, max_depth, callback);
         }
     }
+
+    const PRE_COMMIT_HOOK_SCRIPT: &'static str = r#"#!/bin/sh
+# GODKILLER ZERO : Cognitive Pre-flight Disk Gatekeeper Hook
+echo "[GODKILLER ZERO] Inspecting staged codebase for architectural invariants..."
+
+if command -v godkiller-console >/dev/null 2>&1; then
+    EXE_CMD="godkiller-console"
+elif command -v godkiller-zero >/dev/null 2>&1; then
+    EXE_CMD="godkiller-zero"
+elif [ -f "./godkiller-console.exe" ]; then
+    EXE_CMD="./godkiller-console.exe"
+elif [ -f "./godkiller-zero.exe" ]; then
+    EXE_CMD="./godkiller-zero.exe"
+elif [ -f "./target/release/godkiller-console.exe" ]; then
+    EXE_CMD="./target/release/godkiller-console.exe"
+elif [ -f "./target/release/godkiller-zero.exe" ]; then
+    EXE_CMD="./target/release/godkiller-zero.exe"
+else
+    EXE_CMD=""
+fi
+
+if [ -n "$EXE_CMD" ]; then
+    STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\.(rs|ts|tsx|js|jsx|py|go|cs)$')
+    if [ -n "$STAGED_FILES" ]; then
+        for FILE in $STAGED_FILES; do
+            if [ -f "$FILE" ]; then
+                "$EXE_CMD" --gate "$FILE"
+                GATE_EXIT=$?
+                if [ $GATE_EXIT -ne 0 ]; then
+                    echo "[FAIL] [GODKILLER ZERO] Pre-commit gate failed on $FILE! Fix architectural violations before committing."
+                    exit 1
+                fi
+            fi
+        done
+    fi
+else
+    echo "[WARN] [GODKILLER ZERO] Binary 'godkiller-zero' not found in PATH or project root, skipping pre-commit gate."
+fi
+
+exit 0
+"#;
 
     pub fn install_git_pre_commit_hook(workspace_dir: &Path) -> Result<PathBuf, String> {
         let git_dir = workspace_dir.join(".git");
@@ -721,43 +935,13 @@ impl GatekeeperScanner {
                 .map_err(|e| format!("Failed to create .git/hooks directory: {}", e))?;
         }
 
-        let hook_script = r#"#!/bin/sh
-# GODKILLER ZERO : Cognitive Pre-flight Disk Gatekeeper Hook
-echo "🛡️  [GODKILLER ZERO] Inspecting staged codebase for architectural invariants..."
-
-if command -v godkiller-zero >/dev/null 2>&1; then
-    EXE_CMD="godkiller-zero"
-elif [ -f "./godkiller-zero.exe" ]; then
-    EXE_CMD="./godkiller-zero.exe"
-elif [ -f "./target/release/godkiller-zero.exe" ]; then
-    EXE_CMD="./target/release/godkiller-zero.exe"
-else
-    EXE_CMD=""
-fi
-
-if [ -n "$EXE_CMD" ]; then
-    STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\.(rs|ts|tsx|js|jsx|py|go|cs)$')
-    if [ -n "$STAGED_FILES" ]; then
-        for FILE in $STAGED_FILES; do
-            if [ -f "$FILE" ]; then
-                "$EXE_CMD" --gate "$FILE"
-                GATE_EXIT=$?
-                if [ $GATE_EXIT -ne 0 ]; then
-                    echo "❌ [GODKILLER ZERO] Pre-commit gate failed on $FILE! Fix architectural violations before committing."
-                    exit 1
-                fi
-            fi
-        done
-    fi
-else
-    echo "⚠️  [GODKILLER ZERO] Binary 'godkiller-zero' not found in PATH or project root, skipping pre-commit gate."
-fi
-
-exit 0
-"#;
-
         let hook_file = git_hooks_dir.join("pre-commit");
-        fs::write(&hook_file, hook_script)
+        if hook_file.exists() {
+            let backup_file = git_hooks_dir.join("pre-commit.bak");
+            let _ = fs::copy(&hook_file, &backup_file);
+        }
+
+        fs::write(&hook_file, Self::PRE_COMMIT_HOOK_SCRIPT)
             .map_err(|e| format!("Failed to write pre-commit hook file: {}", e))?;
 
         #[cfg(unix)]
@@ -787,9 +971,13 @@ mod tests {
 
         let long_py_code = "def long_fn():\n".to_string() + &"    pass\n".repeat(20);
         let long_lines: Vec<&str> = long_py_code.lines().collect();
-        let long_violations = GatekeeperScanner::check_function_spans(&long_lines, "test.py", 10, 7);
+        let long_violations =
+            GatekeeperScanner::check_function_spans(&long_lines, "test.py", 10, 7);
         assert_eq!(long_violations.len(), 1);
-        assert_eq!(long_violations[0].rule_identifier, "RULE_4_MAX_FUNCTION_SPAN");
+        assert_eq!(
+            long_violations[0].rule_identifier,
+            "RULE_4_MAX_FUNCTION_SPAN"
+        );
     }
 
     #[test]
@@ -823,7 +1011,9 @@ fn deeply_nested_logic() {
 "#;
         let lines: Vec<&str> = rust_code.lines().collect();
         let violations = GatekeeperScanner::check_function_spans(&lines, "src/nested.rs", 70, 3);
-        assert!(violations.iter().any(|v| v.rule_identifier == "RULE_3_MAX_COGNITIVE_COMPLEXITY"));
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_identifier == "RULE_3_MAX_COGNITIVE_COMPLEXITY"));
     }
 
     #[test]
@@ -833,12 +1023,18 @@ fn deeply_nested_logic() {
         assert!(BANNED_IDENTIFIER_PATTERN.is_match("res, err := doSomething()"));
 
         // Idiomatic patterns that MUST NOT be falsely banned
+        assert!(!BANNED_IDENTIFIER_PATTERN.is_match("let result = parse();"));
+        assert!(!BANNED_IDENTIFIER_PATTERN.is_match("let payload = request.json();"));
+        assert!(!BANNED_IDENTIFIER_PATTERN.is_match("let info = logger.get();"));
         assert!(!BANNED_IDENTIFIER_PATTERN.is_match("const { data } = response;"));
         assert!(!BANNED_IDENTIFIER_PATTERN.is_match("const { data, error } = supabase.from('x');"));
         assert!(!BANNED_IDENTIFIER_PATTERN.is_match("app.get('/', (req, res) => {});"));
         assert!(!BANNED_IDENTIFIER_PATTERN.is_match("response.data = fetch();"));
         assert!(!BANNED_IDENTIFIER_PATTERN.is_match("const userProfile = response;"));
         assert!(!BANNED_IDENTIFIER_PATTERN.is_match("let accountBalance = 100;"));
+        assert!(!BANNED_IDENTIFIER_PATTERN.is_match("for (const item of items)"));
+        assert!(!BANNED_IDENTIFIER_PATTERN.is_match("for (let item in collection)"));
+        assert!(BANNED_IDENTIFIER_PATTERN.is_match("const item = 1;"));
     }
 
     #[test]
@@ -846,22 +1042,50 @@ fn deeply_nested_logic() {
         let mut violations = Vec::new();
 
         // 1. Python silent catch & TODO
-        let py_lines = vec!["try:", "    risky()", "except:", "    pass", "# TODO: fix later"];
-        GatekeeperScanner::check_lazy_stubs_and_error_hygiene_rule(&py_lines, "service.py", "py", &mut violations);
-        assert!(violations.iter().any(|v| v.rule_identifier == "RULE_12_NO_SILENT_CATCH"));
-        assert!(violations.iter().any(|v| v.rule_identifier == "RULE_12_ANTI_LAZY_STUBS"));
+        let py_lines = vec![
+            "try:",
+            "    risky()",
+            "except:",
+            "    pass",
+            "# TODO: fix later",
+        ];
+        GatekeeperScanner::check_lazy_stubs_and_error_hygiene_rule(
+            &py_lines,
+            "service.py",
+            "py",
+            &mut violations,
+        );
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_identifier == "RULE_12_NO_SILENT_CATCH"));
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_identifier == "RULE_12_ANTI_LAZY_STUBS"));
 
         // 2. TypeScript silent catch
         violations.clear();
         let ts_lines = vec!["try { doWork(); } catch (err) {}", "const x = 42;"];
-        GatekeeperScanner::check_lazy_stubs_and_error_hygiene_rule(&ts_lines, "handler.ts", "ts", &mut violations);
-        assert!(violations.iter().any(|v| v.rule_identifier == "RULE_12_NO_SILENT_CATCH"));
+        GatekeeperScanner::check_lazy_stubs_and_error_hygiene_rule(
+            &ts_lines,
+            "handler.ts",
+            "ts",
+            &mut violations,
+        );
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_identifier == "RULE_12_NO_SILENT_CATCH"));
 
         // 3. Rust unwrap in non-test file
         violations.clear();
         let rs_lines = vec!["let value = compute().unwrap();"];
-        GatekeeperScanner::check_lazy_stubs_and_error_hygiene_rule(&rs_lines, "src/core.rs", "rs", &mut violations);
-        assert!(violations.iter().any(|v| v.rule_identifier == "RULE_12_EXHAUSTIVE_ERROR_HANDLING"));
+        GatekeeperScanner::check_lazy_stubs_and_error_hygiene_rule(
+            &rs_lines,
+            "src/core.rs",
+            "rs",
+            &mut violations,
+        );
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_identifier == "RULE_12_EXHAUSTIVE_ERROR_HANDLING"));
     }
 }
-

@@ -67,8 +67,7 @@ impl PerProjectSymbolGraph {
         Self::collect_source_paths(workspace_root, &mut source_files);
 
         let mut consumers = Vec::new();
-        let word_boundary_regex =
-            Regex::new(&format!(r"\b{}\b", regex::escape(symbol_name))).ok();
+        let word_boundary_regex = Regex::new(&format!(r"\b{}\b", regex::escape(symbol_name))).ok();
 
         for file_path in source_files {
             let Ok(content_text) = fs::read_to_string(&file_path) else {
@@ -118,17 +117,8 @@ impl PerProjectSymbolGraph {
         }
     }
 
-    fn parse_declaration_signature(line_slice: &str) -> Option<(&str, &str)> {
-        let trimmed = line_slice.trim();
-        // Ignore comments
-        if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') || trimmed.starts_with('#') {
-            return None;
-        }
-
-        let mut current = trimmed;
+    fn strip_declaration_modifiers(mut current: &str) -> (&str, bool) {
         let mut is_pub = false;
-
-        // Peel off visibility and export modifiers
         loop {
             if let Some(rest) = current.strip_prefix("export default ") {
                 current = rest.trim_start();
@@ -151,10 +141,52 @@ impl PerProjectSymbolGraph {
                 break;
             }
         }
+        (current, is_pub)
+    }
+
+    fn is_comment_line(trimmed: &str) -> bool {
+        trimmed.starts_with("//")
+            || trimmed.starts_with("/*")
+            || trimmed.starts_with('*')
+            || trimmed.starts_with('#')
+    }
+
+    fn match_pattern_prefix<'a>(
+        current: &'a str,
+        prefix: &str,
+        kind: &'a str,
+    ) -> Option<(&'a str, &'a str)> {
+        let remainder = current.strip_prefix(prefix)?;
+        let identifier = remainder
+            .split(|c: char| !c.is_alphanumeric() && c != '_')
+            .next()
+            .unwrap_or("")
+            .trim();
+        if identifier.len() >= 3 && !identifier.starts_with('_') {
+            Some((identifier, kind))
+        } else {
+            None
+        }
+    }
+
+    fn parse_declaration_signature(line_slice: &str) -> Option<(&str, &str)> {
+        let trimmed = line_slice.trim();
+        if Self::is_comment_line(trimmed) {
+            return None;
+        }
+
+        let (current, is_pub) = Self::strip_declaration_modifiers(trimmed);
 
         let patterns: [(&str, &str); 10] = [
             ("function ", "Function"),
-            ("fn ", if is_pub { "Public Function" } else { "Function" }),
+            (
+                "fn ",
+                if is_pub {
+                    "Public Function"
+                } else {
+                    "Function"
+                },
+            ),
             ("def ", "Function"),
             ("class ", if is_pub { "Public Class" } else { "Class" }),
             ("struct ", if is_pub { "Public Struct" } else { "Struct" }),
@@ -166,53 +198,65 @@ impl PerProjectSymbolGraph {
         ];
 
         for (prefix, kind) in patterns {
-            if let Some(remainder) = current.strip_prefix(prefix) {
-                let identifier = remainder
-                    .split(|c: char| !c.is_alphanumeric() && c != '_')
-                    .next()
-                    .unwrap_or("")
-                    .trim();
-                if identifier.len() >= 3 && !identifier.starts_with('_') {
-                    return Some((identifier, kind));
-                }
+            if let Some(matched) = Self::match_pattern_prefix(current, prefix, kind) {
+                return Some(matched);
             }
         }
         None
     }
 
+    fn is_ignored_source_entry(name: &str) -> bool {
+        name.starts_with('.')
+            || name == "target"
+            || name == "node_modules"
+            || name == "dist"
+            || name == "bin"
+            || name == "obj"
+    }
+
+    fn process_source_path_entry(
+        entry_path: PathBuf,
+        valid_extensions: &[&str],
+        paths_collector: &mut Vec<PathBuf>,
+    ) {
+        let entry_name = entry_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("");
+
+        if Self::is_ignored_source_entry(entry_name) {
+            return;
+        }
+        if fs::symlink_metadata(&entry_path)
+            .map(|m| m.is_symlink())
+            .unwrap_or(false)
+        {
+            return;
+        }
+
+        if entry_path.is_dir() {
+            Self::collect_source_paths(&entry_path, paths_collector);
+        } else if entry_path.is_file() {
+            let extension_slice = entry_path
+                .extension()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            if valid_extensions.contains(&extension_slice) {
+                paths_collector.push(entry_path);
+            }
+        }
+    }
 
     fn collect_source_paths(current_dir: &Path, paths_collector: &mut Vec<PathBuf>) {
         let Ok(directory_entries) = fs::read_dir(current_dir) else {
             return;
         };
-        let valid_extensions = ["tsx", "ts", "jsx", "js", "rs", "py", "go", "vue", "svelte"];
+        let valid_extensions = [
+            "tsx", "ts", "jsx", "js", "rs", "py", "go", "vue", "svelte", "cs",
+        ];
 
         for entry in directory_entries.flatten() {
-            let entry_path = entry.path();
-            let entry_name = entry_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("");
-
-            if entry_name.starts_with('.')
-                || entry_name == "target"
-                || entry_name == "node_modules"
-                || entry_name == "dist"
-            {
-                continue;
-            }
-
-            if entry_path.is_dir() {
-                Self::collect_source_paths(&entry_path, paths_collector);
-            } else if entry_path.is_file() {
-                let extension_slice = entry_path
-                    .extension()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("");
-                if valid_extensions.contains(&extension_slice) {
-                    paths_collector.push(entry_path);
-                }
-            }
+            Self::process_source_path_entry(entry.path(), &valid_extensions, paths_collector);
         }
     }
 }
@@ -257,19 +301,30 @@ mod tests {
     #[test]
     fn test_parse_advanced_signatures_and_ignore_comments() {
         // Comments should be ignored
-        assert_eq!(PerProjectSymbolGraph::parse_declaration_signature("// pub fn old_code()"), None);
-        assert_eq!(PerProjectSymbolGraph::parse_declaration_signature("/* export function fake() */"), None);
+        assert_eq!(
+            PerProjectSymbolGraph::parse_declaration_signature("// pub fn old_code()"),
+            None
+        );
+        assert_eq!(
+            PerProjectSymbolGraph::parse_declaration_signature("/* export function fake() */"),
+            None
+        );
 
         // Rust pub(crate) async fn
-        let parsed_crate = PerProjectSymbolGraph::parse_declaration_signature("pub(crate) async fn dispatch_signal()");
+        let parsed_crate = PerProjectSymbolGraph::parse_declaration_signature(
+            "pub(crate) async fn dispatch_signal()",
+        );
         assert_eq!(parsed_crate, Some(("dispatch_signal", "Public Function")));
 
         // TypeScript interface & type
-        let parsed_iface = PerProjectSymbolGraph::parse_declaration_signature("export interface UserProfilePayload {");
+        let parsed_iface = PerProjectSymbolGraph::parse_declaration_signature(
+            "export interface UserProfilePayload {",
+        );
         assert_eq!(parsed_iface, Some(("UserProfilePayload", "Interface")));
 
-        let parsed_type = PerProjectSymbolGraph::parse_declaration_signature("export type SecurityRole = string;");
+        let parsed_type = PerProjectSymbolGraph::parse_declaration_signature(
+            "export type SecurityRole = string;",
+        );
         assert_eq!(parsed_type, Some(("SecurityRole", "Type")));
     }
 }
-

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub const GK_ZERO_MARKER_START: &str = "<!-- godkiller-zero:start -->";
 pub const GK_ZERO_MARKER_END: &str = "<!-- godkiller-zero:end -->";
@@ -226,7 +226,8 @@ fn build_hygiene_rule_block(
     } else if rules.limit_span {
         hygiene_subrules.push(format!("   - Maximum function span: {} lines (business logic). Exemptions: Declarative UI, DTO mappings, static config, and tests/.", max_span));
     }
-    hygiene_subrules.push("   - Enforce guard clauses and early returns (nesting depth <= 3).".to_string());
+    hygiene_subrules
+        .push("   - Enforce guard clauses and early returns (nesting depth <= 3).".to_string());
     if rules.ban_generic {
         hygiene_subrules.push("   - Strictly FORBIDDEN generic identifiers: [data, res, req, item, val, temp, obj, info, payload, result, handleData, processData, doAction] in domain models/state (framework signatures exempt).".to_string());
     }
@@ -236,7 +237,10 @@ fn build_hygiene_rule_block(
     if hygiene_subrules.is_empty() {
         "3. ANTI-SPAGHETTI & CODE HYGIENE: Write clean, domain-anchored code.".to_string()
     } else {
-        format!("3. ANTI-SPAGHETTI & CODE HYGIENE (WITH STRUCTURAL IMMUNITY):\n{}", hygiene_subrules.join("\n"))
+        format!(
+            "3. ANTI-SPAGHETTI & CODE HYGIENE (WITH STRUCTURAL IMMUNITY):\n{}",
+            hygiene_subrules.join("\n")
+        )
     }
 }
 
@@ -261,7 +265,12 @@ fn build_mcp_directive_text(mcp_enforce: bool) -> &'static str {
 
 fn build_visual_rules(rules: &InvariantRulesSelection) -> String {
     let ascii = if rules.ascii_blueprints {
-        if rules.ascii_cadence.as_deref().unwrap_or("Fast").eq_ignore_ascii_case("Fast") {
+        if rules
+            .ascii_cadence
+            .as_deref()
+            .unwrap_or("Fast")
+            .eq_ignore_ascii_case("Fast")
+        {
             "\n7. MANDATORY ASCII WIREFRAMES (FAST - PLANS & UI ONLY):\n   - Render spatial ASCII wireframes in fenced code blocks (```text) ONLY during plans or UI specs. General Q&A is strictly exempt."
         } else {
             "\n7. MANDATORY ASCII BLUEPRINTS (NORMAL - GLOBAL):\n   - Render explicit ASCII diagrams in fenced code blocks (```text) or markdown tables for all architectures, UI, and workflows. Never emit raw unfenced borders."
@@ -271,7 +280,12 @@ fn build_visual_rules(rules: &InvariantRulesSelection) -> String {
     };
 
     let mermaid = if rules.mermaid_diagrams {
-        if rules.mermaid_cadence.as_deref().unwrap_or("Fast").eq_ignore_ascii_case("Fast") {
+        if rules
+            .mermaid_cadence
+            .as_deref()
+            .unwrap_or("Fast")
+            .eq_ignore_ascii_case("Fast")
+        {
             "\n7b. MANDATORY MERMAID WORKFLOW (FAST - PLANS ONLY):\n   - Render Mermaid diagrams (```mermaid graph LR/TD) ONLY in plans/architecture specs for logic flows. General Q&A is strictly exempt."
         } else {
             "\n7b. MANDATORY MERMAID WORKFLOW (NORMAL - GLOBAL):\n   - Render Mermaid diagrams (```mermaid) across all responses for system architecture, state transitions, and workflows."
@@ -283,7 +297,10 @@ fn build_visual_rules(rules: &InvariantRulesSelection) -> String {
     format!("{}{}", ascii, mermaid)
 }
 
-fn build_mutation_bounding_rule(negative_mutation_bounding: bool, thai_polarity: bool) -> &'static str {
+fn build_mutation_bounding_rule(
+    negative_mutation_bounding: bool,
+    thai_polarity: bool,
+) -> &'static str {
     if !negative_mutation_bounding {
         return "";
     }
@@ -306,31 +323,75 @@ fn build_circuit_breaker_rule(circuit_breaker: bool, thai_polarity: bool) -> &'s
 }
 
 fn build_core_guard_rules(rules: &InvariantRulesSelection) -> String {
-    let blast = if rules.blast_radius { "\n8. BLAST RADIUS IMPACT AUDIT: Verify inbound callers and downstream dependencies before modifying functions, endpoints, or data models." } else { "" };
-    let stack = if rules.stack_sensor { "\n9. TECH STACK AUTO-ALIGNMENT: Strictly adhere to project frameworks, libraries, and compiler toolchains without hallucinating dependencies." } else { "" };
-    let mutation_guard = build_mutation_bounding_rule(rules.negative_mutation_bounding, rules.thai_polarity);
+    let blast = if rules.blast_radius {
+        "\n8. BLAST RADIUS IMPACT AUDIT: Verify inbound callers and downstream dependencies before modifying functions, endpoints, or data models."
+    } else {
+        ""
+    };
+    let stack = if rules.stack_sensor {
+        "\n9. TECH STACK AUTO-ALIGNMENT: Strictly adhere to project frameworks, libraries, and compiler toolchains without hallucinating dependencies."
+    } else {
+        ""
+    };
+    let mutation_guard =
+        build_mutation_bounding_rule(rules.negative_mutation_bounding, rules.thai_polarity);
     let circuit = build_circuit_breaker_rule(rules.circuit_breaker, rules.thai_polarity);
 
     format!("{}{}{}{}", blast, stack, mutation_guard, circuit)
 }
 
 fn build_advanced_guidance_rules(rules: &InvariantRulesSelection) -> String {
-    let exhaustive = if rules.exhaustive_errors { "\n12. EXHAUSTIVE ERROR HANDLING & NO LAZY STUBS:\n    - FORBIDDEN unchecked unwrap(), raw expect(), silent catch {} / except: pass, or unhandled rejected promises.\n    - FORBIDDEN lazy stubs (e.g., '// TODO: implement later'). Deferred logic must declare typed interfaces and throw explicit domain NotImplemented errors." } else { "" };
-    let functional = if rules.functional_core { "\n13. FUNCTIONAL CORE & IMPERATIVE SHELL:\n    - Decouple pure business logic and state transitions from impure I/O (disk, network). Domain logic must be deterministic and testable without mocks." } else { "" };
-    let modern_web = if rules.modern_web_sources { "\n14. MODERN WEB & DOCUMENTATION GUIDANCE:\n    - In web research, prioritize current official documentation and latest GitHub releases over obsolete blog tutorials." } else { "" };
-    let ui_ux = if rules.premium_ui_ux { "\n15. PREMIUM UI/UX AESTHETIC MANDATE (ZERO BROWSER DEFAULTS):\n    - Enforce design tokens: modern typography (Inter/Roboto/Outfit), curated HSL/dark palette, 8px grid, smooth transitions (0.15s-0.2s).\n    - Strictly FORBIDDEN raw browser buttons, unstyled tables/links, and default saturated primaries (#ff0000, #0000ff)." } else { "" };
-    let evolution = if rules.infinite_evolution { "\n16. INFINITE EVOLUTIONARY CONTINUUM (ENTERPRISE ROADMAP ADVANCEMENT):\n    - Passing tests is a milestone, NOT a stopping signal. Upon 100% pass, checkpoint Git.\n    - Autonomously formulate next phase roadmap (e.g., caching, telemetry, hardening) without waiting for prompts, until explicit user pause." } else { "" };
-    let repo_map_rule = if rules.repo_map { "\n17. CODEBASE REPO MAP RADAR:\n    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context." } else { "" };
+    let exhaustive = if rules.exhaustive_errors {
+        "\n12. EXHAUSTIVE ERROR HANDLING & NO LAZY STUBS:\n    - FORBIDDEN unchecked unwrap(), raw expect(), silent catch {} / except: pass, or unhandled rejected promises.\n    - FORBIDDEN lazy stubs (e.g., '// TODO: implement later'). Deferred logic must declare typed interfaces and throw explicit domain NotImplemented errors."
+    } else {
+        ""
+    };
+    let functional = if rules.functional_core {
+        "\n13. FUNCTIONAL CORE & IMPERATIVE SHELL:\n    - Decouple pure business logic and state transitions from impure I/O (disk, network). Domain logic must be deterministic and testable without mocks."
+    } else {
+        ""
+    };
+    let modern_web = if rules.modern_web_sources {
+        "\n14. MODERN WEB & DOCUMENTATION GUIDANCE:\n    - In web research, prioritize current official documentation and latest GitHub releases over obsolete blog tutorials."
+    } else {
+        ""
+    };
+    let ui_ux = if rules.premium_ui_ux {
+        "\n15. PREMIUM UI/UX AESTHETIC MANDATE (ZERO BROWSER DEFAULTS):\n    - Enforce design tokens: modern typography (Inter/Roboto/Outfit), curated HSL/dark palette, 8px grid, smooth transitions (0.15s-0.2s).\n    - Strictly FORBIDDEN raw browser buttons, unstyled tables/links, and default saturated primaries (#ff0000, #0000ff)."
+    } else {
+        ""
+    };
+    let evolution = if rules.infinite_evolution {
+        "\n16. INFINITE EVOLUTIONARY CONTINUUM (ENTERPRISE ROADMAP ADVANCEMENT):\n    - Passing tests is a milestone, NOT a stopping signal. Upon 100% pass, checkpoint Git.\n    - Autonomously formulate next phase roadmap (e.g., caching, telemetry, hardening) without waiting for prompts, until explicit user pause."
+    } else {
+        ""
+    };
+    let repo_map_rule = if rules.repo_map {
+        "\n17. CODEBASE REPO MAP RADAR:\n    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context."
+    } else {
+        ""
+    };
 
-    format!("{}{}{}{}{}{}", exhaustive, functional, modern_web, ui_ux, evolution, repo_map_rule)
+    format!(
+        "{}{}{}{}{}{}",
+        exhaustive, functional, modern_web, ui_ux, evolution, repo_map_rule
+    )
 }
 
 fn build_audit_and_guard_rules(rules: &InvariantRulesSelection) -> String {
-    format!("{}{}", build_core_guard_rules(rules), build_advanced_guidance_rules(rules))
+    format!(
+        "{}{}",
+        build_core_guard_rules(rules),
+        build_advanced_guidance_rules(rules)
+    )
 }
 
 fn build_optional_rules_suffix(rules: &InvariantRulesSelection) -> String {
-    format!("{}{}", build_visual_rules(rules), build_audit_and_guard_rules(rules))
+    format!(
+        "{}{}",
+        build_visual_rules(rules),
+        build_audit_and_guard_rules(rules)
+    )
 }
 
 #[must_use]
@@ -379,7 +440,6 @@ fn build_vibe_rule_text(thai_polarity: bool) -> &'static str {
 pub fn generate_antigravity_rule_block(discipline: &str) -> String {
     generate_custom_antigravity_rule_block(discipline, None)
 }
-
 
 fn parse_hook_discipline(block: &str) -> String {
     if block.contains("SHIN - Zero-Tolerance Strict") || block.contains("Discipline: 神") {
@@ -439,7 +499,8 @@ fn parse_hook_rules(block: &str) -> InvariantRulesSelection {
         limit_span: block.contains("Maximum span") || block.contains("Maximum function span"),
         zero_fluff: block.contains("ZERO CONVERSATIONAL FLUFF"),
         complexity: block.contains("Maximum cyclomatic complexity"),
-        ascii_blueprints: block.contains("MANDATORY ASCII BLUEPRINTS") || block.contains("MANDATORY ASCII WIREFRAMES"),
+        ascii_blueprints: block.contains("MANDATORY ASCII BLUEPRINTS")
+            || block.contains("MANDATORY ASCII WIREFRAMES"),
         ascii_cadence: parse_cadence_mode(block, "FAST - PLANS & UI ONLY"),
         mermaid_diagrams: block.contains("MANDATORY MERMAID WORKFLOW"),
         mermaid_cadence: parse_cadence_mode(block, "FAST - PLANS ONLY"),
@@ -461,7 +522,14 @@ fn parse_hook_rules(block: &str) -> InvariantRulesSelection {
 }
 
 pub fn is_antigravity_hooked() -> bool {
-    query_antigravity_hook_state().hooked
+    if query_antigravity_hook_state().hooked {
+        return true;
+    }
+    discover_additional_ide_target_paths().iter().any(|p| {
+        fs::read_to_string(p)
+            .map(|content| content.contains(GK_ZERO_MARKER_START))
+            .unwrap_or(false)
+    })
 }
 
 pub fn query_antigravity_hook_state() -> HookStateDetails {
@@ -516,22 +584,109 @@ pub fn query_antigravity_hook_state() -> HookStateDetails {
     }
 }
 
-fn merge_hook_corpus(persisted: &str, new_block: &str) -> String {
-    if persisted.contains(GK_ZERO_MARKER_START) {
-        let before_start = persisted.split(GK_ZERO_MARKER_START).next().unwrap_or("");
-        let after_end = persisted.split(GK_ZERO_MARKER_END).nth(1).unwrap_or("");
-
-        match (before_start.trim().is_empty(), after_end.trim().is_empty()) {
-            (true, true) => new_block.to_string(),
-            (false, true) => format!("{}\n\n{}", before_start.trim_end(), new_block),
-            (true, false) => format!("{}\n\n{}", new_block, after_end.trim_start()),
-            (false, false) => format!("{}\n\n{}\n\n{}", before_start.trim_end(), new_block, after_end.trim_start()),
+pub fn strip_all_hook_blocks(content: &str) -> String {
+    let mut current = content.to_string();
+    while let Some(start_idx) = current.find(GK_ZERO_MARKER_START) {
+        if let Some(end_rel_idx) = current[start_idx..].find(GK_ZERO_MARKER_END) {
+            let end_idx = start_idx + end_rel_idx + GK_ZERO_MARKER_END.len();
+            let before = &current[..start_idx];
+            let after = &current[end_idx..];
+            current = match (before.trim().is_empty(), after.trim().is_empty()) {
+                (true, true) => String::new(),
+                (false, true) => before.trim_end().to_string(),
+                (true, false) => after.trim_start().to_string(),
+                (false, false) => format!("{}\n\n{}", before.trim_end(), after.trim_start()),
+            };
+        } else {
+            let after_marker = &current[start_idx..];
+            let next_line = after_marker
+                .find('\n')
+                .map(|idx| start_idx + idx + 1)
+                .unwrap_or(current.len());
+            current = format!("{}{}", &current[..start_idx], &current[next_line..]);
         }
-    } else if persisted.trim().is_empty() {
+    }
+    current
+}
+
+fn merge_hook_corpus(persisted: &str, new_block: &str) -> String {
+    let cleaned = strip_all_hook_blocks(persisted);
+    if cleaned.trim().is_empty() {
         new_block.to_string()
     } else {
-        format!("{}\n\n{}", persisted.trim_end(), new_block)
+        format!("{}\n\n{}", cleaned.trim_end(), new_block)
     }
+}
+
+fn push_if_exists(paths: &mut Vec<PathBuf>, candidate: PathBuf) {
+    if candidate.exists() {
+        paths.push(candidate);
+    }
+}
+
+fn push_home_ide_paths(paths: &mut Vec<PathBuf>) {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .map(PathBuf::from)
+        .ok();
+
+    let Some(home_dir) = home else {
+        return;
+    };
+
+    push_if_exists(paths, home_dir.join(".cursorrules"));
+    push_if_exists(paths, home_dir.join(".claude").join("CLAUDE.md"));
+}
+
+fn discover_additional_ide_target_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    push_home_ide_paths(&mut paths);
+
+    push_if_exists(&mut paths, PathBuf::from(".cursorrules"));
+    push_if_exists(&mut paths, PathBuf::from("CLAUDE.md"));
+    push_if_exists(
+        &mut paths,
+        PathBuf::from(".github").join("copilot-instructions.md"),
+    );
+
+    paths
+}
+
+fn write_hook_to_file(target_file: &Path, manifest: &str) -> Result<(), String> {
+    if let Some(parent_dir) = target_file.parent() {
+        if !parent_dir.exists() {
+            let _ = fs::create_dir_all(parent_dir);
+        }
+    }
+
+    let persisted = if target_file.exists() {
+        let content = fs::read_to_string(target_file)
+            .map_err(|e| format!("Failed to read {}: {}", target_file.display(), e))?;
+        let backup_path = target_file.with_extension("bak");
+        let _ = fs::write(backup_path, &content);
+        content
+    } else {
+        String::new()
+    };
+
+    let synthesized = merge_hook_corpus(&persisted, manifest);
+    fs::write(target_file, synthesized)
+        .map_err(|e| format!("Failed to write to {}: {}", target_file.display(), e))
+}
+
+fn remove_hook_from_file(target_file: &Path) -> Result<bool, String> {
+    if !target_file.exists() {
+        return Ok(false);
+    }
+    let persisted = fs::read_to_string(target_file)
+        .map_err(|e| format!("Failed to read {}: {}", target_file.display(), e))?;
+    if !persisted.contains(GK_ZERO_MARKER_START) {
+        return Ok(false);
+    }
+    let sanitized = strip_all_hook_blocks(&persisted);
+    fs::write(target_file, sanitized)
+        .map_err(|e| format!("Failed to write {}: {}", target_file.display(), e))?;
+    Ok(true)
 }
 
 pub fn hook_antigravity_with_rules(
@@ -541,36 +696,25 @@ pub fn hook_antigravity_with_rules(
     let gemini_root = resolve_gemini_root()
         .ok_or_else(|| "Could not locate Google Antigravity directory (~/.gemini)".to_string())?;
 
-    if !gemini_root.exists() {
-        let _ = fs::create_dir_all(&gemini_root);
-    }
-
     let target_file = gemini_root.join("GEMINI.md");
     let architectural_invariant_manifest =
         generate_custom_antigravity_rule_block(discipline, rules);
 
-    let persisted_rule_corpus = if target_file.exists() {
-        fs::read_to_string(&target_file)
-            .map_err(|e| format!("Failed to read existing GEMINI.md: {}", e))?
-    } else {
-        String::new()
-    };
+    write_hook_to_file(&target_file, &architectural_invariant_manifest)?;
 
-    if target_file.exists() {
-        let _ = fs::write(gemini_root.join("GEMINI.md.bak"), &persisted_rule_corpus);
+    let mut hooked_count = 1usize;
+    for additional_path in discover_additional_ide_target_paths() {
+        if write_hook_to_file(&additional_path, &architectural_invariant_manifest).is_ok() {
+            hooked_count += 1;
+        }
     }
-
-    let synthesized_rule_corpus = merge_hook_corpus(&persisted_rule_corpus, &architectural_invariant_manifest);
-
-    fs::write(&target_file, synthesized_rule_corpus)
-        .map_err(|e| format!("Failed to write to GEMINI.md: {}", e))?;
 
     Ok(AntigravityHookResult {
         success: true,
         path_modified: target_file,
         message: format!(
-            "Successfully injected GODKILLER ZERO invariants ({}) into Antigravity IDE & CLI rules.",
-            discipline
+            "Successfully injected GODKILLER ZERO invariants ({}) into {} IDE target(s).",
+            discipline, hooked_count
         ),
     })
 }
@@ -584,49 +728,16 @@ pub fn unhook_antigravity() -> Result<AntigravityHookResult, String> {
         .ok_or_else(|| "Could not locate Google Antigravity directory (~/.gemini)".to_string())?;
 
     let target_file = gemini_root.join("GEMINI.md");
-    if !target_file.exists() {
-        return Ok(AntigravityHookResult {
-            success: true,
-            path_modified: target_file,
-            message: "GEMINI.md does not exist. Nothing to unhook.".to_string(),
-        });
+    let _ = remove_hook_from_file(&target_file);
+
+    for additional_path in discover_additional_ide_target_paths() {
+        let _ = remove_hook_from_file(&additional_path);
     }
-
-    let persisted_rule_corpus =
-        fs::read_to_string(&target_file).map_err(|e| format!("Failed to read GEMINI.md: {}", e))?;
-
-    if !persisted_rule_corpus.contains(GK_ZERO_MARKER_START) {
-        return Ok(AntigravityHookResult {
-            success: true,
-            path_modified: target_file,
-            message: "GODKILLER ZERO is not hooked in GEMINI.md.".to_string(),
-        });
-    }
-
-    let before_start = persisted_rule_corpus
-        .split(GK_ZERO_MARKER_START)
-        .next()
-        .unwrap_or("");
-    let after_end = persisted_rule_corpus
-        .split(GK_ZERO_MARKER_END)
-        .nth(1)
-        .unwrap_or("");
-
-    let sanitized_rule_corpus = match (before_start.trim().is_empty(), after_end.trim().is_empty())
-    {
-        (true, true) => String::new(),
-        (false, true) => before_start.trim().to_string(),
-        (true, false) => after_end.trim().to_string(),
-        (false, false) => format!("{}\n\n{}", before_start.trim_end(), after_end.trim_start()),
-    };
-
-    fs::write(&target_file, sanitized_rule_corpus)
-        .map_err(|e| format!("Failed to write cleaned GEMINI.md: {}", e))?;
 
     Ok(AntigravityHookResult {
         success: true,
         path_modified: target_file,
-        message: "Successfully unhooked GODKILLER ZERO from Google Antigravity.".to_string(),
+        message: "Successfully unhooked GODKILLER ZERO from all IDEs.".to_string(),
     })
 }
 

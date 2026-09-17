@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::domain::{
-    AntiSpaghettiDirective, AstDiscoveryEngine, LinguisticTranspiler,
-    QuantumSuperpositionSimulator,
+    AntiSpaghettiDirective, AstDiscoveryEngine, LinguisticTranspiler, QuantumSuperpositionSimulator,
 };
 use crate::upstream::bootstrap::{EngineStatus, OllamaBootstrapManager};
 
@@ -136,10 +135,26 @@ fn is_thai_or_english_greeting(query: &str) -> bool {
 }
 
 fn build_greeting_response() -> String {
-    "⛩️ [GODKILLER ZERO]\n\
+    "[GODKILLER ZERO]\n\
      Cognitive Pre-flight Firewall & Zero-Vibe Invariants Active (100% Local Loopback).\n\
      Awaiting instructions."
         .to_string()
+}
+
+async fn probe_single_endpoint(
+    client: &reqwest::Client,
+    request: &ChatCompletionInboundRequest,
+    endpoint: &str,
+    provider_name: &str,
+) -> Option<String> {
+    let network_resp = client.post(endpoint).json(request).send().await.ok()?;
+    if !network_resp.status().is_success() {
+        return None;
+    }
+    let json_envelope = network_resp.json::<serde_json::Value>().await.ok()?;
+    let choice_str = json_envelope["choices"][0]["message"]["content"].as_str()?;
+    tracing::info!("Forwarded to local {} engine successfully", provider_name);
+    Some(choice_str.to_string())
 }
 
 async fn try_local_llm_forward(
@@ -152,21 +167,13 @@ async fn try_local_llm_forward(
     ];
 
     for (endpoint, provider_name) in local_endpoints {
-        if let Ok(network_resp) = client.post(endpoint).json(request).send().await {
-            if network_resp.status().is_success() {
-                if let Ok(json_envelope) = network_resp.json::<serde_json::Value>().await {
-                    if let Some(choice_str) = json_envelope["choices"][0]["message"]["content"].as_str() {
-                        tracing::info!("Forwarded to local {} engine successfully", provider_name);
-                        return Ok(choice_str.to_string());
-                    }
-                }
-            }
+        if let Some(content) = probe_single_endpoint(client, request, endpoint, provider_name).await
+        {
+            return Ok(content);
         }
     }
     Err(())
 }
-
-
 
 fn build_bootstrap_notice_if_busy(status: &EngineStatus) -> Option<String> {
     match status {
@@ -175,20 +182,14 @@ fn build_bootstrap_notice_if_busy(status: &EngineStatus) -> Option<String> {
             percent,
             status_text,
         } => Some(format!(
-            "⏳ [GODKILLER ZERO : AI ENGINE INITIALIZING]\n\
+            "[GODKILLER ZERO : AI ENGINE INITIALIZING]\n\
              กำลังจัดเตรียมโมเดล AI บนเครื่องของคุณ: {} ({:.1}%)\n\
              สถานะปัจจุบัน: {}\n\n\
              กรุณารอสักครู่ เมื่อดาวน์โหลดเสร็จ คำสั่งถัดไปจะประมวลผลด้วยโมเดล Neural จริง 100% โดยอัตโนมัติ",
             model, percent, status_text
         )),
-        EngineStatus::DownloadingInstaller { percent } => Some(format!(
-            "⏳ [GODKILLER ZERO : SETUP IN PROGRESS]\n\
-             กำลังดาวน์โหลดตัวติดตั้ง AI Engine บนเครื่องของคุณ ({:.1}%)\n\
-             ระบบกำลังตั้งค่าให้อัตโนมัติ ไม่ต้องคลิกอะไรเพิ่มเติม",
-            percent
-        )),
-        EngineStatus::StartingService | EngineStatus::InstallingOllama => Some(
-            "⏳ [GODKILLER ZERO : STARTING LOCAL AI]\n\
+        EngineStatus::StartingService => Some(
+            "[GODKILLER ZERO : STARTING LOCAL AI]\n\
              กำลังเริ่มการทำงานของ Service ในเบื้องหลัง กรุณารอสักครู่..."
                 .to_string(),
         ),
@@ -213,7 +214,8 @@ fn synthesize_real_preflight_contract(raw_query: &str) -> String {
 
     let mut target_files_section = String::new();
     if discovered_coords.is_empty() {
-        target_files_section.push_str("• Scope: Active Editor Selection / Current Working Workspace\n");
+        target_files_section
+            .push_str("• Scope: Active Editor Selection / Current Working Workspace\n");
     } else {
         for coord in &discovered_coords {
             target_files_section.push_str(&format!(
@@ -226,11 +228,14 @@ fn synthesize_real_preflight_contract(raw_query: &str) -> String {
 
     let mut clarifiers_section = String::new();
     for clarifier in clarifiers {
-        clarifiers_section.push_str(&format!("  - [{}] {}\n", clarifier.action_id, clarifier.display_label));
+        clarifiers_section.push_str(&format!(
+            "  - [{}] {}\n",
+            clarifier.action_id, clarifier.display_label
+        ));
     }
 
     format!(
-        "/* ⛩️ [GODKILLER ZERO : COGNITIVE PRE-FLIGHT COMPILER CONTRACT] */\n\
+        "/* [GODKILLER ZERO : COGNITIVE PRE-FLIGHT COMPILER CONTRACT] */\n\
          /* Mode: Standalone Semantic Synthesis (Offline Zero-Dependency Engine) */\n\n\
          [TARGET SCOPE & DISCOVERED COORDINATES]\n\
          {}\n\

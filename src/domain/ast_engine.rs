@@ -26,10 +26,7 @@ impl AstEngine {
             .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
-        matches!(
-            extension,
-            "rs" | "cs" | "ts" | "tsx" | "js" | "jsx" | "py"
-        )
+        matches!(extension, "rs" | "cs" | "ts" | "tsx" | "js" | "jsx" | "py")
     }
 
     #[must_use]
@@ -48,15 +45,11 @@ impl AstEngine {
         let parsed_tree = parser.parse(source_code, None)?;
         let path_str = file_path.to_string_lossy().replace('\\', "/");
         let is_test_context = Self::is_test_file_path(file_path);
-        let is_structural_exempt = is_test_context
-            || path_str.ends_with("Form.cs")
-            || path_str.starts_with("gui-")
-            || path_str.contains("/gui-")
-            || path_str.starts_with("src-ui/")
-            || path_str.contains("/src-ui/")
-            || path_str.contains("/ui/")
-            || path_str.contains("/views/")
-            || path_str.contains("/components/");
+        let is_gui_path = path_str.split('/').any(|segment| {
+            matches!(segment, "gui" | "src-ui" | "ui" | "views" | "components")
+                || segment.starts_with("gui-")
+        });
+        let is_structural_exempt = is_test_context || path_str.ends_with("Form.cs") || is_gui_path;
 
         let mut discovered_functions = Vec::new();
         Self::traverse_for_functions(
@@ -106,9 +99,7 @@ impl AstEngine {
             "rust" => node_kind == "function_item",
             "c_sharp" => matches!(
                 node_kind,
-                "method_declaration"
-                    | "local_function_statement"
-                    | "constructor_declaration"
+                "method_declaration" | "local_function_statement" | "constructor_declaration"
             ),
             "typescript" | "tsx" => matches!(
                 node_kind,
@@ -130,12 +121,8 @@ impl AstEngine {
         target_list: &mut Vec<AstFunctionMetrics>,
     ) {
         if Self::is_function_node(current_node.kind(), language) {
-            let metric_entry = Self::measure_function(
-                current_node,
-                source_code,
-                language,
-                is_structural_exempt,
-            );
+            let metric_entry =
+                Self::measure_function(current_node, source_code, language, is_structural_exempt);
             target_list.push(metric_entry);
         }
 
@@ -173,8 +160,7 @@ impl AstEngine {
             || symbol_identifier == "InitializeComponent"
             || symbol_identifier.ends_with("Form");
 
-        let calculated_complexity =
-            Self::calculate_cognitive_complexity(function_node, 0);
+        let calculated_complexity = Self::calculate_cognitive_complexity(function_node, 0);
 
         AstFunctionMetrics {
             function_name: symbol_identifier,
@@ -223,8 +209,6 @@ impl AstEngine {
         } else if is_control_flow {
             complexity_score += 1 + current_nesting;
             current_nesting + 1
-        } else if Self::is_nesting_barrier(node.kind()) {
-            current_nesting + 1
         } else {
             current_nesting
         };
@@ -270,16 +254,6 @@ impl AstEngine {
                 | "for_in_statement"
                 | "catch_clause"
                 | "conditional_expression"
-        )
-    }
-
-    fn is_nesting_barrier(node_kind: &str) -> bool {
-        matches!(
-            node_kind,
-            "match_expression"
-                | "switch_statement"
-                | "switch_expression"
-                | "try_statement"
         )
     }
 }
@@ -347,6 +321,9 @@ export const DashboardView = () => {
             .expect("Valid tsx parse");
         assert_eq!(report.functions.len(), 1);
         let metric = &report.functions[0];
-        assert!(metric.is_exempt, "JSX components must have structural immunity");
+        assert!(
+            metric.is_exempt,
+            "JSX components must have structural immunity"
+        );
     }
 }

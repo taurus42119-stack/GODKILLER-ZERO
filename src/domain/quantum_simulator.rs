@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 
 static COORDINATE_EXTRACTOR_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    match Regex::new(r"([a-zA-Z0-9_./\\-]+\.(tsx|ts|jsx|js|rs|py|go|html|css|vue|svelte|java|kt|cs|cpp|c|h|hpp|toml|yaml|yml|json|md|sh|rb|php|sql)|Dockerfile|Makefile)") {
+    match Regex::new(
+        r"([a-zA-Z0-9_./\\-]+\.(tsx|ts|jsx|js|rs|py|go|html|css|vue|svelte|java|kt|cs|cpp|c|h|hpp|toml|yaml|yml|json|md|sh|rb|php|sql)|Dockerfile|Makefile)",
+    ) {
         Ok(compiled) => compiled,
         Err(_) => match Regex::new("") {
             Ok(fallback) => fallback,
@@ -86,12 +88,14 @@ impl QuantumSuperpositionSimulator {
         let contract = Self::synthesize_contract(coordinate_slice.into(), trimmed_input, directive);
         let hoare_contract_spec = Some(contract.render_hoare_specification());
         let dense_symbolic_ir_spec = if transpiled.is_negated {
-            Some(super::formal_contract::HoareContract::render_negation_dense_ir(
-                &contract.target_coordinate,
-                &transpiled.technical_action_summary,
-                "Universal",
-                &[],
-            ))
+            Some(
+                super::formal_contract::HoareContract::render_negation_dense_ir(
+                    &contract.target_coordinate,
+                    &transpiled.technical_action_summary,
+                    "Universal",
+                    &[],
+                ),
+            )
         } else {
             Some(contract.render_dense_symbolic_ir(&transpiled.technical_action_summary))
         };
@@ -148,12 +152,27 @@ impl QuantumSuperpositionSimulator {
         }
     }
 
-    fn evaluate_branch_beta_consistency(_input: &str) -> QuantumBranchState {
+    fn evaluate_branch_beta_consistency(input: &str) -> QuantumBranchState {
+        let trimmed = input.trim();
+        let is_empty = trimmed.is_empty();
+        let has_control_chars = trimmed
+            .chars()
+            .any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t');
+
+        let passed = !is_empty && !has_control_chars;
+        let fidelity_score = if passed { 1.0 } else { 0.0 };
+
+        let diagnostic_message = if !passed {
+            "Prompt input failed semantic consistency checks (empty or corrupt tokens).".into()
+        } else {
+            "Post-condition intent verified for semantic compilation.".into()
+        };
+
         QuantumBranchState {
             branch_identifier: "BETA_TRANSITION_CONSISTENCY".into(),
-            passed: true,
-            fidelity_score: 1.0,
-            diagnostic_message: "Post-condition intent verified for compilation.".into(),
+            passed,
+            fidelity_score,
+            diagnostic_message,
         }
     }
 
@@ -193,21 +212,21 @@ impl QuantumSuperpositionSimulator {
 
         fixes.push(QuickFixAction {
             action_identifier: "qf_explicit_file".into(),
-            display_label: "📍 ระบุพิกัดไฟล์เจาะจง (e.g. In path/to/file.ext)".into(),
+            display_label: "ระบุพิกัดไฟล์เจาะจง (e.g. In path/to/file.ext)".into(),
             replacement_target: format!("In file <target_file>: {}", input),
             action_payload: format!("In file <target_file>: {}", input),
         });
 
         fixes.push(QuickFixAction {
             action_identifier: "qf_domain_scope".into(),
-            display_label: "🌐 ใช้ Domain Scope (ให้ AI ค้นหาสัญลักษณ์ผ่าน LSP/MCP)".into(),
+            display_label: "ใช้ Domain Scope (ให้ AI ค้นหาสัญลักษณ์ผ่าน LSP/MCP)".into(),
             replacement_target: format!("Domain(About: {})", input),
             action_payload: format!("Domain(About: {})", input),
         });
 
         fixes.push(QuickFixAction {
             action_identifier: "qf_ascii_blueprint".into(),
-            display_label: "📐 บังคับสร้างพิมพ์เขียว ASCII ก่อนเขียนโค้ด".into(),
+            display_label: "บังคับสร้างพิมพ์เขียว ASCII ก่อนเขียนโค้ด".into(),
             replacement_target: format!(
                 "{}\n[INVARIANT: Render explicit ASCII component wireframe before writing code]",
                 input

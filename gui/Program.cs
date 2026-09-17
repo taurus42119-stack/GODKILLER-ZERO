@@ -47,24 +47,34 @@ static class Program
                 if (!string.IsNullOrEmpty(name)) return name;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
         return "Default";
     }
 
-    public static string ScopedMutexName => $"Local\\GodkillerZeroGui_Mutex_{GetCurrentDesktopName()}";
+    public static string ScopedMutexName => $"Local\\GodkillerZero_Mutex_{GetCurrentDesktopName()}";
     public static string ScopedPipeName => $"GodkillerZero_WakePipe_{GetCurrentDesktopName()}";
-    public static string ScopedWakeUpEventName => $"GodkillerZeroGui_ShowEvent_{GetCurrentDesktopName()}";
+    public static string ScopedWakeUpEventName => $"GodkillerZero_ShowEvent_{GetCurrentDesktopName()}";
 
     public const string ActivateMessageName = "GODKILLER_ZERO_ACTIVATE_WINDOW";
 
     public static void Log(string msg)
     {
+#if DEBUG
         try
         {
-            string p = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup.log");
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "godkiller-zero");
+            if (!System.IO.Directory.Exists(tempDir)) System.IO.Directory.CreateDirectory(tempDir);
+            string p = System.IO.Path.Combine(tempDir, "startup.log");
             System.IO.File.AppendAllText(p, $"[{DateTime.Now:HH:mm:ss.fff}] [PID {Environment.ProcessId}] {msg}\n");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+        }
+#endif
     }
 
     [STAThread]
@@ -137,8 +147,6 @@ static class Program
             }
         }
 
-        Log("Purging any remaining orphans...");
-        KillOrphanedInstances();
 
         Log("ApplicationConfiguration.Initialize()...");
         ApplicationConfiguration.Initialize();
@@ -151,7 +159,7 @@ static class Program
         GC.KeepAlive(_mutex);
     }
 
-    public const string MainWindowTitle = "GODKILLER ZORO 1.0";
+    public const string MainWindowTitle = "GODKILLER ZERO 1.0";
 
     private static bool ActivateExistingInstance()
     {
@@ -222,10 +230,12 @@ static class Program
         try
         {
             int currentPid = Environment.ProcessId;
-            var processes = System.Diagnostics.Process.GetProcessesByName("GodkillerZeroGui");
+            int currentSession = System.Diagnostics.Process.GetCurrentProcess().SessionId;
+            var processes = System.Diagnostics.Process.GetProcessesByName("GodkillerZero")
+                .Concat(System.Diagnostics.Process.GetProcessesByName("GodkillerZeroGui"));
             foreach (var p in processes)
             {
-                if (p.Id != currentPid)
+                if (p.Id != currentPid && p.SessionId == currentSession)
                 {
                     try
                     {

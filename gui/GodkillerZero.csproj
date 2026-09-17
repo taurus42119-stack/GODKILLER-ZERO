@@ -8,11 +8,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>GodkillerZeroGui</RootNamespace>
-    <AssemblyName>GodkillerZeroGui</AssemblyName>
+    <AssemblyName>GodkillerZero</AssemblyName>
     <NoWarn>$(NoWarn);WFO1000</NoWarn>
     <Deterministic>true</Deterministic>
-    <PathMap>$(MSBuildProjectDirectory)=/gui-csharp</PathMap>
-    <ApplicationIcon>app.ico</ApplicationIcon>
+    <PathMap>$(MSBuildProjectDirectory)=/gui</PathMap>
+    <ApplicationIcon>..\assets\app.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -21,14 +21,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="app.ico">
+    <Content Include="..\assets\app.ico" Link="app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="app.png">
+    <Content Include="..\assets\app.png" Link="app.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="app.ico" />
-    <EmbeddedResource Include="app.png" />
+    <EmbeddedResource Include="..\assets\app.ico" LogicalName="GodkillerZeroGui.app.ico" />
+    <EmbeddedResource Include="..\assets\app.png" LogicalName="GodkillerZeroGui.app.png" />
   </ItemGroup>
 
 </Project>

@@ -7,6 +7,14 @@ description = "Cognitive Pre-flight Firewall & Semantic IR Compiler for Google A
 license = "MIT"
 repository = "https://github.com/taurus42119-stack/godkiller-zero"
 
+[lib]
+name = "godkiller_zero"
+path = "src/lib.rs"
+
+[[bin]]
+name = "godkiller-console"
+path = "src/main.rs"
+
 [dependencies]
 tokio = { version = "1.43", features = ["full"] }
 axum = { version = "0.8", features = ["tokio", "http2"] }

@@ -1,19 +1,18 @@
 # Rust / Cargo
 /target/
 **/*.rs.bk
-Cargo.lock
 
-# Binary Outputs & Debug Symbols
+# Binary Outputs & Packages
 *.exe
 *.dll
 *.pdb
 *.deps.json
 *.runtimeconfig.json
-godkiller-zero.exe
+*.zip
 
 # .NET / C# Build & Publish
-gui-csharp/bin/
-gui-csharp/obj/
+gui/bin/
+gui/obj/
 publish/
 bin/
 obj/
@@ -22,6 +21,9 @@ obj/
 .idea/
 .vscode/
 .gemini/
+.agents/
+.claude/
+.codex/
 .cargo/config.toml
 *.swp
 *.swo
@@ -38,3 +40,4 @@ Thumbs.db
 *.log
 dist/
 node_modules/
+GODKILLER ZERO (BETA)/

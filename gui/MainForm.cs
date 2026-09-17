@@ -62,7 +62,7 @@ public class MainForm : Form
         _activeDiscipline = HookEngine.GetCurrentDiscipline();
         _options = HookEngine.LoadOptionsFromDisk();
 
-        Text = "GODKILLER ZORO 1.0";
+        Text = "GODKILLER ZERO 1.0";
         ClientSize = new Size(380, 485);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
@@ -308,7 +308,7 @@ public class MainForm : Form
 
         var lblVersion = new Label
         {
-            Text = "Version: 1.0.0 • @kayvin.th",
+            Text = "Version: 1.0.0 • @kayvins.th",
             Font = Theme.FontSmall,
             ForeColor = Theme.TextMuted,
             Location = new Point(170, top + 2),
@@ -324,7 +324,7 @@ public class MainForm : Form
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = "https://www.instagram.com/kayvin.th?stkn=MXR0ZW96OWRkY3V1dA%3D%3D&utm_source=qr",
+                    FileName = "https://www.instagram.com/kayvins.th",
                     UseShellExecute = true
                 });
             }
@@ -802,7 +802,7 @@ public class MainForm : Form
                     return;
                 }
             }
-            MessageBox.Show(this, "Could not locate godkiller-zero.exe engine. Please ensure it is compiled and present in the project directory.", "Audit Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, "Could not locate godkiller-console.exe engine. Please ensure it is compiled and present in the project directory.", "Audit Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -877,7 +877,7 @@ public class MainForm : Form
                         System.IO.Pipes.PipeDirection.InOut,
                         1,
                         System.IO.Pipes.PipeTransmissionMode.Byte,
-                        System.IO.Pipes.PipeOptions.Asynchronous);
+                        System.IO.Pipes.PipeOptions.Asynchronous | System.IO.Pipes.PipeOptions.CurrentUserOnly);
 
                     await server.WaitForConnectionAsync(token);
                     int b = server.ReadByte();
@@ -954,13 +954,13 @@ public class MainForm : Form
     {
         _trayIcon = new NotifyIcon
         {
-            Text = "GODKILLER ZORO 1.0",
+            Text = "GODKILLER ZERO 1.0",
             Icon = CreateAppIcon(),
             Visible = true
         };
 
         var menu = new ContextMenuStrip();
-        menu.Items.Add("Open GODKILLER ZORO", null, (s, e) => ShowAndActivate());
+        menu.Items.Add("Open GODKILLER ZERO", null, (s, e) => ShowAndActivate());
         menu.Items.Add("SHIELD", null, (s, e) => ApplyHook(_activeDiscipline));
         menu.Items.Add("RESTORE", null, (s, e) => ApplyUnhook());
         menu.Items.Add(new ToolStripSeparator());
@@ -1044,7 +1044,15 @@ public class MainForm : Form
         try
         {
             string desktopDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            string desktopShortcutPath = Path.Combine(desktopDirectory, "GODKILLER ZORO 1.0.lnk");
+            string desktopShortcutPath = Path.Combine(desktopDirectory, "GODKILLER ZERO 1.0.lnk");
+
+            // Clean up any legacy misspelled shortcut if present
+            string legacyShortcutPath = Path.Combine(desktopDirectory, "GODKILLER ZORO 1.0.lnk");
+            if (File.Exists(legacyShortcutPath))
+            {
+                try { File.Delete(legacyShortcutPath); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+            }
+
             if (File.Exists(desktopShortcutPath))
             {
                 return;
@@ -1060,20 +1068,20 @@ public class MainForm : Form
             string iconPathCandidate = Path.Combine(baseDirectory, "app.ico");
             string iconCoordinate = File.Exists(iconPathCandidate) ? iconPathCandidate : executablePath;
 
-            string escapedShortcut = desktopShortcutPath.Replace("'", "''");
-            string escapedTarget = executablePath.Replace("'", "''");
-            string escapedWorkingDir = baseDirectory.Replace("'", "''");
-            string escapedIcon = iconCoordinate.Replace("'", "''");
-
-            string powershellScript = $"$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('{escapedShortcut}'); $s.TargetPath = '{escapedTarget}'; $s.WorkingDirectory = '{escapedWorkingDir}'; $s.IconLocation = '{escapedIcon},0'; $s.Description = 'GODKILLER ZORO 1.0'; $s.Save()";
-            var processStartCoordinates = new ProcessStartInfo
+            Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType != null)
             {
-                FileName = "powershell",
-                Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{powershellScript}\"",
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-            Process.Start(processStartCoordinates)?.WaitForExit(3000);
+                dynamic? shell = Activator.CreateInstance(shellType);
+                if (shell != null)
+                {
+                    dynamic shortcut = shell.CreateShortcut(desktopShortcutPath);
+                    shortcut.TargetPath = executablePath;
+                    shortcut.WorkingDirectory = baseDirectory;
+                    shortcut.IconLocation = $"{iconCoordinate},0";
+                    shortcut.Description = "GODKILLER ZERO 1.0";
+                    shortcut.Save();
+                }
+            }
         }
         catch (Exception exceptionTrace)
         {

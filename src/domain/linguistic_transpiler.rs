@@ -177,12 +177,11 @@ impl LinguisticTranspiler {
                 cleaned = lines[1..lines.len() - 1].join("\n").trim().to_string();
             }
         }
-        if (cleaned.starts_with('"') && cleaned.ends_with('"'))
-            || (cleaned.starts_with('\'') && cleaned.ends_with('\''))
+        if ((cleaned.starts_with('"') && cleaned.ends_with('"'))
+            || (cleaned.starts_with('\'') && cleaned.ends_with('\'')))
+            && cleaned.len() >= 2
         {
-            if cleaned.len() >= 2 {
-                cleaned = cleaned[1..cleaned.len() - 1].trim().to_string();
-            }
+            cleaned = cleaned[1..cleaned.len() - 1].trim().to_string();
         }
         cleaned.trim().to_string()
     }
@@ -236,11 +235,17 @@ impl LinguisticTranspiler {
             "PRESERVE".to_string()
         } else if lower_english.starts_with("fix") {
             "FIX".to_string()
-        } else if lower_english.starts_with("implement") || lower_english.starts_with("create") || lower_english.starts_with("add") {
+        } else if lower_english.starts_with("implement")
+            || lower_english.starts_with("create")
+            || lower_english.starts_with("add")
+        {
             "IMPLEMENT".to_string()
         } else if lower_english.starts_with("remove") || lower_english.starts_with("delete") {
             "REMOVE".to_string()
-        } else if lower_english.starts_with("inspect") || lower_english.starts_with("audit") || lower_english.starts_with("check") {
+        } else if lower_english.starts_with("inspect")
+            || lower_english.starts_with("audit")
+            || lower_english.starts_with("check")
+        {
             "INSPECT".to_string()
         } else {
             "UPDATE".to_string()
@@ -249,7 +254,26 @@ impl LinguisticTranspiler {
 
     fn extract_candidate_tokens(lower_english: &str) -> Vec<String> {
         let mut candidate_search_tokens = Vec::new();
-        let stop_words = ["the", "a", "an", "with", "into", "from", "for", "and", "or", "to", "in", "on", "at", "by", "of", "component", "effect", "include"];
+        let stop_words = [
+            "the",
+            "a",
+            "an",
+            "with",
+            "into",
+            "from",
+            "for",
+            "and",
+            "or",
+            "to",
+            "in",
+            "on",
+            "at",
+            "by",
+            "of",
+            "component",
+            "effect",
+            "include",
+        ];
         for word in lower_english.split(|c: char| !c.is_alphanumeric() && c != '_') {
             let trimmed_word = word.trim();
             if trimmed_word.len() >= 3 && !stop_words.contains(&trimmed_word) {
@@ -262,7 +286,10 @@ impl LinguisticTranspiler {
 
     fn extract_components_and_styles(lower_english: &str) -> (Vec<String>, Vec<String>) {
         let mut detected_components = Vec::new();
-        let known_components = ["button", "table", "form", "card", "modal", "dialog", "navbar", "sidebar", "input", "dropdown", "menu", "header", "footer", "chart"];
+        let known_components = [
+            "button", "table", "form", "card", "modal", "dialog", "navbar", "sidebar", "input",
+            "dropdown", "menu", "header", "footer", "chart",
+        ];
         for comp in known_components {
             if lower_english.contains(comp) {
                 detected_components.push(format!("{} component", comp));
@@ -270,7 +297,17 @@ impl LinguisticTranspiler {
         }
 
         let mut styling_tokens = Vec::new();
-        let known_styles = ["3d", "depth", "isometric", "gradient", "neon", "glow", "shadow", "glassmorphism", "blur"];
+        let known_styles = [
+            "3d",
+            "depth",
+            "isometric",
+            "gradient",
+            "neon",
+            "glow",
+            "shadow",
+            "glassmorphism",
+            "blur",
+        ];
         for st in known_styles {
             if lower_english.contains(st) {
                 styling_tokens.push(format!("styling: {}", st));
@@ -288,7 +325,8 @@ impl LinguisticTranspiler {
         let is_negated = Self::detect_is_negated(&lower_input, &lower_english);
         let primary_action = Self::classify_primary_action(&lower_english, is_greeting, is_negated);
         let candidate_search_tokens = Self::extract_candidate_tokens(&lower_english);
-        let (detected_components, styling_tokens) = Self::extract_components_and_styles(&lower_english);
+        let (detected_components, styling_tokens) =
+            Self::extract_components_and_styles(&lower_english);
 
         let technical_action_summary = if is_greeting {
             "Conversational Chitchat (Bypassed)".to_string()
@@ -321,16 +359,20 @@ impl LinguisticTranspiler {
             || raw_input.contains("สร้าง")
             || raw_input.contains("เขียน");
 
-        let is_greeting = !has_action_marker && (
-            raw_input == "สวัสดี"
-            || raw_input.contains("กินข้าว")
-            || raw_input.contains("สบายดี")
-        );
+        let is_greeting = !has_action_marker
+            && (raw_input == "สวัสดี" || raw_input.contains("กินข้าว") || raw_input.contains("สบายดี"));
 
-        let is_negated = !is_dont_forget && (raw_input.contains("อย่า") || raw_input.contains("ห้าม"));
+        let is_negated =
+            !is_dont_forget && (raw_input.contains("อย่า") || raw_input.contains("ห้าม"));
 
         TranspiledIntent {
-            primary_action: if is_greeting { "CONVERSATIONAL".to_string() } else if is_negated { "PRESERVE".to_string() } else { "UPDATE".to_string() },
+            primary_action: if is_greeting {
+                "CONVERSATIONAL".to_string()
+            } else if is_negated {
+                "PRESERVE".to_string()
+            } else {
+                "UPDATE".to_string()
+            },
             detected_components: Vec::new(),
             styling_tokens: Vec::new(),
             technical_action_summary: raw_input.to_string(),
@@ -415,7 +457,12 @@ mod tests {
         assert!(!outcome.circuit_breaker_triggered);
         assert!(outcome.is_greeting);
         let lower = outcome.concise_english.to_lowercase();
-        assert!(lower.contains("eaten") || lower.contains("meal") || lower.contains("eat") || lower.contains("กินข้าว"));
+        assert!(
+            lower.contains("eaten")
+                || lower.contains("meal")
+                || lower.contains("eat")
+                || lower.contains("กินข้าว")
+        );
     }
 
     #[test]

@@ -13,15 +13,16 @@ static INJECTION_TOKEN_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     }
 });
 
-static ANTIGRAVITY_USER_REQUEST_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    match Regex::new(r"(?s)<USER_REQUEST>(.*?)</USER_REQUEST>") {
-        Ok(compiled) => compiled,
-        Err(_) => match Regex::new("") {
-            Ok(fallback) => fallback,
-            Err(_) => unreachable!(),
+static ANTIGRAVITY_USER_REQUEST_PATTERN: LazyLock<Regex> =
+    LazyLock::new(
+        || match Regex::new(r"(?s)<USER_REQUEST>(.*?)</USER_REQUEST>") {
+            Ok(compiled) => compiled,
+            Err(_) => match Regex::new("") {
+                Ok(fallback) => fallback,
+                Err(_) => unreachable!(),
+            },
         },
-    }
-});
+    );
 
 pub struct IngressSecuritySanitizer;
 
@@ -56,51 +57,76 @@ impl IngressSecuritySanitizer {
             .to_string()
     }
 
+    fn parse_origin_authority(authority: &str) -> Result<(&str, &str), ()> {
+        if authority.starts_with('[') {
+            let end_bracket = authority.find(']').ok_or(())?;
+            let host_part = &authority[..=end_bracket];
+            let rest = &authority[end_bracket + 1..];
+            let port_part = rest.strip_prefix(':').unwrap_or("");
+            Ok((host_part, port_part))
+        } else {
+            let mut parts = authority.split(':');
+            let host_part = parts.next().unwrap_or("");
+            let port_part = parts.next().unwrap_or("");
+            Ok((host_part, port_part))
+        }
+    }
+
     #[must_use]
     pub fn is_browser_origin_forbidden(origin_header: Option<&str>) -> bool {
-        if let Some(origin) = origin_header {
-            let lower_origin = origin.trim().to_lowercase();
-            if lower_origin.is_empty() {
-                return false;
-            }
-
-            let without_scheme = if let Some(stripped) = lower_origin.strip_prefix("http://") {
-                stripped
-            } else if let Some(stripped) = lower_origin.strip_prefix("https://") {
-                stripped
-            } else {
-                return true;
-            };
-
-            let authority = without_scheme.split('/').next().unwrap_or("");
-            let (host, port_str) = if authority.starts_with('[') {
-                if let Some(end_bracket) = authority.find(']') {
-                    let host_part = &authority[..=end_bracket];
-                    let rest = &authority[end_bracket + 1..];
-                    let port_part = rest.strip_prefix(':').unwrap_or("");
-                    (host_part, port_part)
-                } else {
-                    return true;
-                }
-            } else {
-                let mut parts = authority.split(':');
-                let host_part = parts.next().unwrap_or("");
-                let port_part = parts.next().unwrap_or("");
-                (host_part, port_part)
-            };
-
-            let is_local = host == "localhost" || host == "127.0.0.1" || host == "[::1]";
-            if !is_local {
-                return true;
-            }
-
-            if !port_str.is_empty() && port_str != "4242" {
-                return true;
-            }
-
+        let Some(origin) = origin_header else {
+            return false;
+        };
+        let lower_origin = origin.trim().to_lowercase();
+        if lower_origin.is_empty() {
             return false;
         }
+
+        let without_scheme = if let Some(stripped) = lower_origin.strip_prefix("http://") {
+            stripped
+        } else if let Some(stripped) = lower_origin.strip_prefix("https://") {
+            stripped
+        } else {
+            return true;
+        };
+
+        let authority = without_scheme.split('/').next().unwrap_or("");
+        let Ok((host, port_str)) = Self::parse_origin_authority(authority) else {
+            return true;
+        };
+
+        let is_local = host == "localhost" || host == "127.0.0.1" || host == "[::1]";
+        if !is_local {
+            return true;
+        }
+
+        if !port_str.is_empty() && port_str.parse::<u16>().is_err() {
+            return true;
+        }
+
         false
+    }
+
+    #[must_use]
+    pub fn is_host_header_forbidden(host_header: Option<&str>) -> bool {
+        let Some(host_val) = host_header else {
+            return false;
+        };
+        let lower = host_val.trim().to_lowercase();
+        if lower.is_empty() {
+            return false;
+        }
+        let host_part = if lower.starts_with('[') {
+            if let Some(end_idx) = lower.find(']') {
+                &lower[..=end_idx]
+            } else {
+                return true;
+            }
+        } else {
+            lower.split(':').next().unwrap_or("")
+        };
+        let is_local = host_part == "localhost" || host_part == "127.0.0.1" || host_part == "[::1]";
+        !is_local
     }
 }
 
@@ -114,10 +140,26 @@ impl EgressFluffStripper {
         }
         let lower = trimmed.to_lowercase();
         let fluff_markers = [
-            "sure", "certainly", "here is", "here are", "below is", "here's", "i've updated",
-            "i have updated", "updated code", "แน่นอน", "ได้ครับ", "ได้ค่ะ", "โอเค", "ต่อไปนี้", "นี่คือ", "สวัสดี"
+            "sure",
+            "certainly",
+            "here is",
+            "here are",
+            "below is",
+            "here's",
+            "i've updated",
+            "i have updated",
+            "updated code",
+            "แน่นอน",
+            "ได้ครับ",
+            "ได้ค่ะ",
+            "โอเค",
+            "ต่อไปนี้",
+            "นี่คือ",
+            "สวัสดี",
         ];
-        let has_marker = fluff_markers.iter().any(|&fluff| lower.starts_with(fluff) || lower.contains(fluff));
+        let has_marker = fluff_markers
+            .iter()
+            .any(|&fluff| lower.starts_with(fluff) || lower.contains(fluff));
         has_marker && trimmed.len() <= 100
     }
 
@@ -128,33 +170,35 @@ impl EgressFluffStripper {
             return raw_stream.to_string();
         }
 
-        if let Some(pos) = trimmed.find("```") {
-            let preamble = &trimmed[..pos];
-            let code_block = &trimmed[pos..];
+        let Some(pos) = trimmed.find("```") else {
+            return raw_stream.to_string();
+        };
 
-            let mut lines: Vec<&str> = preamble.lines().collect();
-            let mut stripped_any = false;
+        let preamble = &trimmed[..pos];
+        let code_block = &trimmed[pos..];
 
-            while let Some(first_line) = lines.first() {
-                if first_line.trim().is_empty() || Self::is_pure_conversational_line(first_line) {
-                    lines.remove(0);
-                    stripped_any = true;
-                } else {
-                    break;
-                }
-            }
+        let mut lines: Vec<&str> = preamble.lines().collect();
+        let mut stripped_any = false;
 
-            if stripped_any {
-                let remaining_preamble = lines.join("\n").trim().to_string();
-                if remaining_preamble.is_empty() {
-                    return code_block.to_string();
-                } else {
-                    return format!("{}\n\n{}", remaining_preamble, code_block);
-                }
+        while let Some(first_line) = lines.first() {
+            if first_line.trim().is_empty() || Self::is_pure_conversational_line(first_line) {
+                lines.remove(0);
+                stripped_any = true;
+            } else {
+                break;
             }
         }
 
-        trimmed.to_string()
+        if !stripped_any {
+            return raw_stream.to_string();
+        }
+
+        let remaining_preamble = lines.join("\n").trim().to_string();
+        if remaining_preamble.is_empty() {
+            code_block.to_string()
+        } else {
+            format!("{}\n\n{}", remaining_preamble, code_block)
+        }
     }
 }
 

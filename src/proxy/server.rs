@@ -31,13 +31,15 @@ async fn origin_guard_middleware(
     let headers = incoming_request.headers();
     let origin_str = headers.get("origin").and_then(|h| h.to_str().ok());
     let referer_str = headers.get("referer").and_then(|h| h.to_str().ok());
+    let host_str = headers.get("host").and_then(|h| h.to_str().ok());
 
     if IngressSecuritySanitizer::is_browser_origin_forbidden(origin_str)
         || IngressSecuritySanitizer::is_browser_origin_forbidden(referer_str)
+        || IngressSecuritySanitizer::is_host_header_forbidden(host_str)
     {
         return Err((
             StatusCode::FORBIDDEN,
-            "Cross-Origin requests from external domains are strictly forbidden.",
+            "Cross-Origin requests or DNS rebinding from external domains are strictly forbidden.",
         ));
     }
 
@@ -118,7 +120,7 @@ impl LocalProxyServer {
         };
 
         tracing::info!(
-            "⚡ GODKILLER ZERO active on http://{} (Strict Loopback)",
+            "GODKILLER ZERO active on http://{} (Strict Loopback)",
             socket_address
         );
 
@@ -136,7 +138,9 @@ impl LocalProxyServer {
 
         #[cfg(unix)]
         let terminate = async {
-            if let Ok(mut signal_stream) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            if let Ok(mut signal_stream) =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            {
                 signal_stream.recv().await;
             }
         };
@@ -181,7 +185,9 @@ async fn ui_favicon_handler() -> Response {
 async fn ui_logo_handler() -> Response {
     Response::builder()
         .header("Content-Type", "image/png")
-        .body(Body::from(include_bytes!("../../src-ui/logo.png").as_slice()))
+        .body(Body::from(
+            include_bytes!("../../src-ui/logo.png").as_slice(),
+        ))
         .unwrap_or_default()
 }
 
@@ -193,17 +199,30 @@ pub fn launch_desktop_card_window(_bind_port: u16) {
         .unwrap_or_else(|| std::path::PathBuf::from("."));
 
     let native_gui_candidates = [
+        current_exe_dir.join("GodkillerZero.exe"),
+        std::path::PathBuf::from("GodkillerZero.exe"),
+        current_exe_dir.join("publish").join("GodkillerZero.exe"),
+        current_exe_dir
+            .join("gui")
+            .join("bin")
+            .join("Release")
+            .join("net9.0-windows")
+            .join("win-x64")
+            .join("GodkillerZero.exe"),
+        current_exe_dir
+            .join("gui")
+            .join("bin")
+            .join("Debug")
+            .join("net9.0-windows")
+            .join("GodkillerZero.exe"),
         current_exe_dir.join("GodkillerZeroGui.exe"),
         std::path::PathBuf::from("GodkillerZeroGui.exe"),
         current_exe_dir.join("publish").join("GodkillerZeroGui.exe"),
-        current_exe_dir.join("gui-csharp").join("bin").join("Debug").join("net9.0-windows").join("GodkillerZeroGui.exe"),
     ];
 
     for candidate in &native_gui_candidates {
-        if candidate.exists() {
-            if std::process::Command::new(candidate).spawn().is_ok() {
-                return;
-            }
+        if candidate.exists() && std::process::Command::new(candidate).spawn().is_ok() {
+            return;
         }
     }
 
@@ -215,11 +234,8 @@ pub fn launch_desktop_card_window(_bind_port: u16) {
     ];
     for edge in &edge_paths {
         if std::path::Path::new(edge).exists() {
-            let _ = std::process::Command::new(edge)
-                .arg(&edge_app_arg)
-                .spawn();
+            let _ = std::process::Command::new(edge).arg(&edge_app_arg).spawn();
             return;
         }
     }
 }
-

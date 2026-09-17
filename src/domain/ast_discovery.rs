@@ -118,7 +118,7 @@ impl AstDiscoveryEngine {
             clarifiers.push(ClarifierOption {
                 action_id: "PIN_DISCOVERED_FILE".into(),
                 display_label: format!(
-                    "🎯 Target: {}",
+                    "Target: {}",
                     target_match.symbol_hint.as_deref().unwrap_or("file")
                 ),
                 description: format!("Anchor mutation strictly to {}", target_match.file_path),
@@ -128,7 +128,7 @@ impl AstDiscoveryEngine {
 
         clarifiers.push(ClarifierOption {
             action_id: "REQUEST_ASCII_BLUEPRINT".into(),
-            display_label: "📐 Request ASCII Wireframe".into(),
+            display_label: "Request ASCII Wireframe".into(),
             description: "Force AI to output explicit ASCII component wireframe before code".into(),
             prompt_patch: format!(
                 "{}\n[INVARIANT: Render explicit ASCII component wireframe before writing code]",
@@ -138,7 +138,7 @@ impl AstDiscoveryEngine {
 
         clarifiers.push(ClarifierOption {
             action_id: "ENFORCE_SINGLE_SCREEN".into(),
-            display_label: "⚡ Restrict Function <= 70 Lines".into(),
+            display_label: "Restrict Function <= 70 Lines".into(),
             description: "Enforce Single-Screen function span invariant".into(),
             prompt_patch: format!(
                 "{}\n[INVARIANT: Decompose logic so function spans never exceed 70 lines]",
@@ -149,6 +149,36 @@ impl AstDiscoveryEngine {
         clarifiers
     }
 
+    fn is_ignored_ast_dir(file_name: &str) -> bool {
+        file_name.starts_with('.')
+            || file_name == "target"
+            || file_name == "node_modules"
+            || file_name == "dist"
+    }
+
+    fn process_workspace_source_entry(
+        path: PathBuf,
+        code_extensions: &[&str],
+        accumulator: &mut Vec<PathBuf>,
+    ) {
+        let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+        if Self::is_ignored_ast_dir(file_name) {
+            return;
+        }
+
+        if path.is_dir() {
+            Self::collect_workspace_source_files(&path, accumulator);
+            return;
+        }
+
+        if path.is_file() {
+            let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+            if code_extensions.contains(&ext) {
+                accumulator.push(path);
+            }
+        }
+    }
+
     fn collect_workspace_source_files(dir: &Path, accumulator: &mut Vec<PathBuf>) {
         let Ok(entries) = fs::read_dir(dir) else {
             return;
@@ -156,25 +186,7 @@ impl AstDiscoveryEngine {
         let code_extensions = ["rs", "ts", "tsx", "js", "jsx", "py", "go", "css", "html"];
 
         for entry in entries.flatten() {
-            let path = entry.path();
-            let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-
-            if file_name.starts_with('.')
-                || file_name == "target"
-                || file_name == "node_modules"
-                || file_name == "dist"
-            {
-                continue;
-            }
-
-            if path.is_dir() {
-                Self::collect_workspace_source_files(&path, accumulator);
-            } else if path.is_file() {
-                let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-                if code_extensions.contains(&ext) {
-                    accumulator.push(path);
-                }
-            }
+            Self::process_workspace_source_entry(entry.path(), &code_extensions, accumulator);
         }
     }
 }

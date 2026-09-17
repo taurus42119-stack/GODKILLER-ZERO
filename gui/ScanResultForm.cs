@@ -27,7 +27,7 @@ public class ScanResultForm : Form
 
         var lblTitle = new Label
         {
-            Text = success ? "✓ INVARIANTS SATISFIED" : "⚠ INVARIANT VIOLATIONS DETECTED",
+            Text = success ? "[PASS] INVARIANTS SATISFIED" : "[WARN] INVARIANT VIOLATIONS DETECTED",
             Font = Theme.FontTitle,
             ForeColor = success ? Color.FromArgb(52, 211, 153) : Color.FromArgb(248, 113, 113),
             Location = new Point(12, 10),

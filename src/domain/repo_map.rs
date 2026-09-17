@@ -37,9 +37,7 @@ impl RepoMapGenerator {
         output.push_str("=== GODKILLER ZERO : PROJECT RADAR MAP ===\n");
         output.push_str(&format!(
             "Workspace: {} | Total files: {} | Symbols indexed: {}\n\n",
-            workspace_name,
-            total_files,
-            total_symbols
+            workspace_name, total_files, total_symbols
         ));
 
         for (rel_path, mut syms) in file_map {

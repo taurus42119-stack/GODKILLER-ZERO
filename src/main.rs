@@ -33,9 +33,9 @@ unsafe fn attach_parent_console_if_cli() {
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "godkiller-zero",
+    name = "godkiller-console",
     version = "1.0.0",
-    about = "⚡ GODKILLER ZERO: Cognitive Pre-flight Firewall & Semantic IR Compiler for Google Antigravity"
+    about = "GODKILLER ZERO: Cognitive Pre-flight Firewall & Semantic IR Compiler for Google Antigravity"
 )]
 struct CliArguments {
     #[arg(short, long, default_value_t = 4242)]
@@ -108,7 +108,10 @@ fn dispatch_cli_command(
         return Some(run_install_hook_command(target_dir_opt.clone()));
     }
     if let Some(target_path_opt) = &arguments.gate {
-        return Some(run_gate_command(target_path_opt.clone(), &arguments.discipline));
+        return Some(run_gate_command(
+            target_path_opt.clone(),
+            &arguments.discipline,
+        ));
     }
     dispatch_secondary_commands(arguments)
 }
@@ -123,7 +126,10 @@ fn dispatch_secondary_commands(
         return Some(run_unhook_command());
     }
     if let Some(raw_prompt_text) = &arguments.purify {
-        return Some(run_purify_command(raw_prompt_text.clone(), &arguments.discipline));
+        return Some(run_purify_command(
+            raw_prompt_text.clone(),
+            &arguments.discipline,
+        ));
     }
     if let Some(target_dir_opt) = &arguments.repo_map {
         return Some(run_repo_map_command(target_dir_opt.clone()));
@@ -131,18 +137,19 @@ fn dispatch_secondary_commands(
     if let Some(cmd_args) = &arguments.run {
         return Some(run_terminal_command(cmd_args));
     }
-    arguments.prune.as_ref().map(|raw_text| run_prune_command(raw_text))
+    arguments
+        .prune
+        .as_ref()
+        .map(|raw_text| run_prune_command(raw_text))
 }
 
-fn run_repo_map_command(
-    target_dir_opt: Option<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn run_repo_map_command(target_dir_opt: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let target_dir_str = target_dir_opt.unwrap_or_else(|| ".".to_string());
     let target_dir = std::path::Path::new(&target_dir_str);
     let report = godkiller_zero::domain::RepoMapGenerator::generate(target_dir, 2048);
     println!("{}", report.map_content);
     println!(
-        "\n✅ [REPO MAP GENERATED] Total files: {}, Symbols indexed: {}, Estimated tokens: {}",
+        "\n[OK] [REPO MAP GENERATED] Total files: {}, Symbols indexed: {}, Estimated tokens: {}",
         report.total_files, report.total_symbols, report.estimated_tokens
     );
     if let Some(ref path) = report.output_file_path {
@@ -174,12 +181,15 @@ fn run_install_hook_command(
     let target_dir = std::path::Path::new(&target_dir_str);
     match godkiller_zero::domain::GatekeeperScanner::install_git_pre_commit_hook(target_dir) {
         Ok(hook_path) => {
-            println!("🛡️  [GODKILLER ZERO : GATEKEEPER INSTALLED]");
+            println!("[GODKILLER ZERO : GATEKEEPER INSTALLED]");
             println!("    Pre-commit hook installed at: {}", hook_path.display());
             Ok(())
         }
         Err(install_failure) => {
-            eprintln!("❌ Failed to install Git pre-commit hook: {}", install_failure);
+            eprintln!(
+                "[FAIL] Failed to install Git pre-commit hook: {}",
+                install_failure
+            );
             std::process::exit(1);
         }
     }
@@ -197,10 +207,13 @@ fn run_gate_command(
         _ => (70, 7),
     };
 
-    println!("🛡️  [GODKILLER ZERO : RUNNING DISK GATEKEEPER]");
+    println!("[GODKILLER ZERO : RUNNING DISK GATEKEEPER]");
     println!("    Scanning target path: {}", scan_path.display());
     println!("    Function span budget: <= {} lines", span_threshold);
-    println!("    Cognitive complexity budget: <= {}", complexity_threshold);
+    println!(
+        "    Cognitive complexity budget: <= {}",
+        complexity_threshold
+    );
 
     let audit = godkiller_zero::domain::GatekeeperScanner::scan_path(
         scan_path,
@@ -226,14 +239,19 @@ fn run_gate_command(
 fn run_hook_command(discipline: &str) -> Result<(), Box<dyn std::error::Error>> {
     match hook_antigravity(discipline) {
         Ok(hook_receipt) => {
-            println!("⛩️  [GODKILLER ZERO : HOOK SUCCESSFUL]");
-            println!("    File Modified: {}", hook_receipt.path_modified.display());
+            println!("[GODKILLER ZERO : HOOK SUCCESSFUL]");
+            println!(
+                "    File Modified: {}",
+                hook_receipt.path_modified.display()
+            );
             println!("    {}", hook_receipt.message);
-            println!("\n    Google Antigravity IDE & CLI are now shielded with Zero-Vibe Invariants.");
+            println!(
+                "\n    Google Antigravity IDE & CLI are now shielded with Zero-Vibe Invariants."
+            );
             Ok(())
         }
         Err(hook_failure) => {
-            eprintln!("❌ Failed to hook into Antigravity: {}", hook_failure);
+            eprintln!("[FAIL] Failed to hook into Antigravity: {}", hook_failure);
             std::process::exit(1);
         }
     }
@@ -242,12 +260,15 @@ fn run_hook_command(discipline: &str) -> Result<(), Box<dyn std::error::Error>> 
 fn run_unhook_command() -> Result<(), Box<dyn std::error::Error>> {
     match unhook_antigravity() {
         Ok(unhook_receipt) => {
-            println!("⛩️  [GODKILLER ZERO : UNHOOK SUCCESSFUL]");
+            println!("[GODKILLER ZERO : UNHOOK SUCCESSFUL]");
             println!("    {}", unhook_receipt.message);
             Ok(())
         }
         Err(rollback_failure) => {
-            eprintln!("❌ Failed to unhook from Antigravity: {}", rollback_failure);
+            eprintln!(
+                "[FAIL] Failed to unhook from Antigravity: {}",
+                rollback_failure
+            );
             std::process::exit(1);
         }
     }
@@ -264,7 +285,9 @@ fn run_purify_command(
 
 fn run_terminal_command(cmd_args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if cmd_args.is_empty() {
-        eprintln!("❌ No command specified for --run. Example: godkiller-zero --run cargo test");
+        eprintln!(
+            "[ERROR] No command specified for --run. Example: godkiller-zero --run cargo test"
+        );
         std::process::exit(1);
     }
 
@@ -300,7 +323,7 @@ fn run_terminal_command(cmd_args: &[String]) -> Result<(), Box<dyn std::error::E
     }
 
     eprintln!(
-        "\n⚡ [GODKILLER ZERO : TERMINAL SHIELD] Input: ~{} tokens | Shielded: ~{} tokens | Reduction: {:.1}%",
+        "\n[GODKILLER ZERO : TERMINAL SHIELD] Input: ~{} tokens | Shielded: ~{} tokens | Reduction: {:.1}%",
         prune_result.original_tokens_est,
         prune_result.pruned_tokens_est,
         prune_result.reduction_percentage
@@ -329,7 +352,7 @@ fn run_prune_command(raw_text: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     eprintln!(
-        "\n⚡ [GODKILLER ZERO : TERMINAL SHIELD] Input: ~{} tokens | Shielded: ~{} tokens | Reduction: {:.1}%",
+        "\n[GODKILLER ZERO : TERMINAL SHIELD] Input: ~{} tokens | Shielded: ~{} tokens | Reduction: {:.1}%",
         prune_result.original_tokens_est,
         prune_result.pruned_tokens_est,
         prune_result.reduction_percentage
@@ -338,9 +361,7 @@ fn run_prune_command(raw_text: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn run_server_mode(
-    arguments: &CliArguments,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_server_mode(arguments: &CliArguments) -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()

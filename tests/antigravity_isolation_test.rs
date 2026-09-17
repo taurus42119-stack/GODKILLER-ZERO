@@ -131,6 +131,9 @@ fn test_browser_origin_rejection_security() {
         Some("http://localhost:4242")
     ));
     assert!(!IngressSecuritySanitizer::is_browser_origin_forbidden(
+        Some("http://localhost:8080")
+    ));
+    assert!(!IngressSecuritySanitizer::is_browser_origin_forbidden(
         Some("http://127.0.0.1:4242")
     ));
     assert!(!IngressSecuritySanitizer::is_browser_origin_forbidden(

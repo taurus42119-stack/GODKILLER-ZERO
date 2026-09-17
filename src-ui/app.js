@@ -194,9 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         await applyShieldWithRules(false);
         updateHookUI(true);
-        showToast('⛩️ ใส่กฎเรียบร้อย: เปิดเกราะคุม AI แล้ว');
+        showToast('ใส่กฎเรียบร้อย: เปิดเกราะคุม AI แล้ว');
       } catch {
-        showToast('❌ ไม่สามารถใส่กฎได้');
+        showToast('ไม่สามารถใส่กฎได้');
       } finally {
         btnToggleHook.disabled = false;
       }
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tileShieldFastlane.addEventListener('click', () => {
       tileShieldFastlane.classList.toggle('active');
       const isOn = tileShieldFastlane.classList.contains('active');
-      showToast(isOn ? '🚀 Fast-Lane Affirmations: Enabled' : '⏸️ Fast-Lane Affirmations: Disabled');
+      showToast(isOn ? 'Fast-Lane Affirmations: Enabled' : 'Fast-Lane Affirmations: Disabled');
     });
   }
 
@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tileShieldCircuit.addEventListener('click', () => {
       tileShieldCircuit.classList.toggle('active');
       const isLocked = tileShieldCircuit.classList.contains('active');
-      showToast(isLocked ? '🛑 Circuit Breaker: Armed' : '🟢 Circuit Breaker: Normal');
+      showToast(isLocked ? 'Circuit Breaker: Armed' : 'Circuit Breaker: Normal');
     });
   }
 
@@ -271,12 +271,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (response.ok) {
         updateHookUI(true);
-        if (notify) showToast('✓ Invariants Saved & Applied');
+        if (notify) showToast('[OK] Invariants Saved & Applied');
       } else if (notify) {
-        showToast('❌ Failed to apply shield');
+        showToast('Failed to apply shield');
       }
     } catch {
-      if (notify) showToast('❌ Service connection offline');
+      if (notify) showToast('Service connection offline');
     }
   }
 
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSaveShield.textContent = 'Applying...';
       await applyShieldWithRules(true);
       btnSaveShield.disabled = false;
-      btnSaveShield.textContent = '💾 Save & Apply';
+      btnSaveShield.textContent = 'Save & Apply';
       closeExtraModal();
     });
   }
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const text = rulesModalContent ? rulesModalContent.textContent : '';
       if (text) {
         await copyToClipboard(text);
-        showToast('✓ Active Rules Copied to Clipboard');
+        showToast('[OK] Active Rules Copied to Clipboard');
       }
     });
   }
@@ -427,22 +427,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (compiledContract) {
           const copied = await copyToClipboard(compiledContract);
           if (copied) {
-            if (crucibleStats) crucibleStats.textContent = '✓ Copied';
-            showToast('✓ Copied Dense AI-IR Contract');
+            if (crucibleStats) crucibleStats.textContent = '[OK] Copied';
+            showToast('[OK] Copied Dense AI-IR Contract');
           } else {
             showToast('Contract compiled. Clipboard access blocked.');
           }
         } else {
-          showToast('❌ Contract synthesis failed');
+          showToast('Contract synthesis failed');
         }
       } else {
-        showToast('❌ Compiler returned error');
+        showToast('Compiler returned error');
       }
     } catch {
-      showToast('❌ Compiler service unavailable');
+      showToast('Compiler service unavailable');
     } finally {
       btnCrucible.disabled = false;
-      btnCrucible.textContent = '⚡ Compile & Copy';
+      btnCrucible.textContent = 'Compile & Copy';
     }
   }
 
@@ -669,16 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (engineProgressBar) engineProgressBar.style.width = `${pct}%`;
       if (engineProgressStatus) engineProgressStatus.textContent = details.status_text || 'Downloading...';
       if (engineProgressPercent) engineProgressPercent.textContent = `${pct}%`;
-    } else if (state === 'DownloadingInstaller') {
-      engineStatusPill.classList.add('busy');
-      if (engineHeaderLabel) engineHeaderLabel.textContent = 'AI Engine: Setup';
-      const pct = (details.percent || 0).toFixed(1);
-      if (engineStatusText) engineStatusText.textContent = `Downloading Setup (${pct}%)`;
-      if (engineProgressWrapper) engineProgressWrapper.style.display = 'flex';
-      if (engineProgressBar) engineProgressBar.style.width = `${pct}%`;
-      if (engineProgressStatus) engineProgressStatus.textContent = 'Downloading installer...';
-      if (engineProgressPercent) engineProgressPercent.textContent = `${pct}%`;
-    } else if (state === 'StartingService' || state === 'InstallingOllama') {
+    } else if (state === 'StartingService') {
       engineStatusPill.classList.add('busy');
       if (engineHeaderLabel) engineHeaderLabel.textContent = 'AI Engine: Starting';
       if (engineStatusText) engineStatusText.textContent = 'Starting service in background...';

@@ -1,8 +1,8 @@
 # ⚡ GODKILLER ZERO (GK-ZERO)
 ### Official Production-Grade Technical Specification & System Blueprint
-**Version:** 1.0.0-GA | **Codename:** Zero-Entropy (零) / ZORO 1.0 | **Default Port:** `4242`  
+**Version:** 1.0.0-GA | **Codename:** Zero-Entropy (零) / ZERO 1.0 | **Default Port:** `4242`  
 **Philosophy:** Zen Minimalist Architecture (日本のミニマリズム) × Zero-Overhead Compact Utility  
-**Target:** Native Core Engine (`godkiller-zero.exe`) + GODKILLER ZORO 1.0 Desktop App (`GodkillerZeroGui.exe`) with System Tray & Desktop Shortcut | **License:** MIT (100% Free & Open Source)
+**Target:** Native Core Engine (`godkiller-console.exe`) + GODKILLER ZERO 1.0 Desktop App (`GodkillerZero.exe`) with System Tray & Desktop Shortcut | **License:** MIT (100% Free & Open Source)
 
 ---
 
@@ -64,7 +64,7 @@ AI Clients ───►│  [Strict Loopback Binding: 127.0.0.1]  │ (ปฏิ
 * **Local Neural Engine:** ใช้ **Local Zero Engine** ร่วมกับ **Autonomous Ollama Bootstrap (`qwen2.5-coder:1.5b`)** ทำงานแบบ Offline-First 100% ไร้ความเสี่ยงเรื่อง API Key รั่วไหล
 * **Binary Path Remapping:**
   * ฝั่ง Rust: ตั้งค่า `--remap-path-prefix` เพื่อตัดพาธไดเรกทอรีในเครื่องผู้พัฒนาให้เหลือ `/godkiller-zero` และ `/user`
-  * ฝั่ง C# GUI: กำหนด `<Deterministic>true</Deterministic>` และ `<PathMap>` ใน `GodkillerZeroGui.csproj` ป้องกันการรั่วไหลของ Absolute Path ใน `.pdb` และ `.dll`
+  * ฝั่ง C# GUI: กำหนด `<Deterministic>true</Deterministic>` และ `<PathMap>` ใน `gui/GodkillerZero.csproj` ป้องกันการรั่วไหลของ Absolute Path ใน `.pdb` และ `.dll`
 
 ### 2.3 Prompt Injection & Malicious Content Sanitizer
 * ตรวจจับและ Escape โทเคนพิเศษที่อาจใช้ Hijack System Prompt เช่น `<|endoftext|>`, `[INST]`, `[/INST]`, `system:`, `<fim_prefix>`, `<fim_suffix>`
@@ -116,7 +116,7 @@ $$\{ \mathcal{P}_{\text{pre}} \} \quad \mathcal{C}[\text{Coordinate}] \quad \{ \
 
 ### 4.1 Window Dimensions & Form Factors
 1. **Edge App Mode (Rust Embedded Web UI):** ขนาดหน้าต่างมาตรฐาน **`380px × 560px`** รันผ่าน Microsoft Edge `--app` mode ปราศจาก Browser Shell
-2. **Native C# WinForms Suite (`GodkillerZeroGui.exe`):** ขนาดหน้าต่างมาตรฐาน **`380px × 610px`** พิกัด Bottom-Right สไตล์ Compact Tray Utility พร้อม System Tray
+2. **Native C# WinForms Suite (`GodkillerZero.exe`):** ขนาดหน้าต่างมาตรฐาน **`380px × 610px`** พิกัด Bottom-Right สไตล์ Compact Tray Utility พร้อม System Tray
 
 ---
 
@@ -148,11 +148,11 @@ $$\{ \mathcal{P}_{\text{pre}} \} \quad \mathcal{C}[\text{Coordinate}] \quad \{ \
 
 ## 6. Continuous Integration & Quality Gates
 
-* **สถานะชุดทดสอบปัจจุบัน:** **43 / 43 Tests Passed (100% Pass Rate)**
-  * `src/lib.rs`: 21 Unit Tests (รวม Rule 12 Multi-Language Stubs & Semantic AST)
-  * `tests/antigravity_isolation_test.rs`: 8 Integration Tests
-  * `tests/quantum_hoare_test.rs`: 14 Domain & Contract Tests
-* **CI Pipeline (`.github/workflows/ci.yml`):** รัน `cargo fmt`, `cargo clippy -D warnings`, `cargo test`, และ `cargo-audit`
+* **สถานะชุดทดสอบปัจจุบัน:** **66 / 66 Tests Passed (100% Pass Rate)**
+  * `src/lib.rs`: 44 Unit Tests (รวม Rule 12 Multi-Language Stubs, Smart Terminal Pruning, Semantic AST, และ Banned Identifiers)
+  * `tests/antigravity_isolation_test.rs`: 8 Integration Tests (รวม Loopback Security, Thai Polarity, และ Envelope Isolation)
+  * `tests/quantum_hoare_test.rs`: 14 Domain & Contract Tests (รวม Hoare Contract, Multi-language Coordinates, และ Intent Circuit Breaker)
+* **CI Pipeline (`.github/workflows/ci.yml` & `release.yml`):** รัน `cargo fmt`, `cargo clippy -D warnings`, `cargo test`, และคอมไพล์ release binary พร้อม sanitize path ผ่าน `--remap-path-prefix` ใน CI
 
 ---
 
@@ -160,13 +160,15 @@ $$\{ \mathcal{P}_{\text{pre}} \} \quad \mathcal{C}[\text{Coordinate}] \quad \{ \
 
 ```text
 GODKILLER ZERO/
-├── .cargo/
-│   └── config.toml                    # Filesystem Path Remapping (--remap-path-prefix)
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                     # Automated Test, Clippy, Security Audit
-│       ├── release.yml                # Automated Windows Release (.exe) Pipeline
+│       ├── release.yml                # Automated Windows Release (.exe) Pipeline with Path Remapping
 │       └── godkiller-gate.template.yml# CI Quality Gate Action Template for Teams
+├── assets/                            # Application icons & branding assets
+│   ├── app.ico
+│   ├── app.png
+│   └── logo.png
 ├── src/                               # แกนสมองกลภาษา Rust (Zero-Spaghetti Architecture)
 │   ├── domain/
 │   │   ├── anti_spaghetti.rs          # Complexity <= 7 & architecture invariant builder
@@ -174,9 +176,11 @@ GODKILLER ZERO/
 │   │   ├── formal_contract.rs         # Zero-Copy Cow<'a, str> HoareContract {P} Target {Q}
 │   │   ├── gatekeeper.rs              # Disk Scanner: Multi-Language CC, Span & Rule 12 Stub auditor
 │   │   ├── linguistic_transpiler.rs   # Thai->English IR, Negation Guard & Circuit Breaker
-│   │   ├── quantum_simulator.rs       # 4-Branch Superposition Simulator & QuickFixAction sniffer
+│   │   ├── quantum_simulator.rs       # 4-Branch Simulation & Semantic Post-Condition validator
+│   │   ├── repo_map.rs                # Repository topology tree generator
 │   │   ├── stack_sensor.rs            # Universal Tech Stack Sensor (package.json, Cargo.toml)
 │   │   ├── symbol_graph.rs            # Semantic Symbol graph & Blast Radius impact auditor
+│   │   ├── terminal_pruner.rs         # Smart Terminal Pruner for Noise Filtering
 │   │   ├── tri_pillar.rs              # Fast-lane, Spatial Anchors & Inquiry classifier
 │   │   ├── zero_bridge.rs             # Post-Prompt Isomorphic Bridge
 │   │   └── mod.rs
@@ -196,8 +200,8 @@ GODKILLER ZERO/
 │   │   └── mod.rs
 │   ├── lib.rs
 │   └── main.rs                        # CLI parser (--hook, --unhook, --gate, --install_hook, --purify)
-├── gui-csharp/                        # C# Windows Forms Compact Card Suite (.NET 9)
-│   ├── GodkillerZeroGui.csproj        # Deterministic Build & PathMap configured
+├── gui/                               # C# Windows Forms Compact Card Suite (.NET 9)
+│   ├── GodkillerZero.csproj           # Deterministic Build & PathMap configured
 │   ├── MainForm.cs                    # Compact card UI, System Tray & Telemetry
 │   ├── HookEngine.cs                  # Universal multi-IDE Hook manager
 │   ├── ExtraSettingsForm.cs           # Checkbox matrix for all 16 Invariants
@@ -210,10 +214,7 @@ GODKILLER ZERO/
 │   └── favicon.svg
 ├── tests/
 │   ├── antigravity_isolation_test.rs  # Loopback security, fast-lane & envelope tests (8 tests)
-│   └── quantum_hoare_test.rs          # Hoare contract, Quantum branches, Ollama tests (14 tests)
-├── .cursorrules                       # 16 Invariant Rules for Cursor IDE
-├── CLAUDE.md                          # 16 Invariant Rules for Anthropic Claude Code
-├── .github/copilot-instructions.md    # 16 Invariant Rules for VS Code Copilot
+│   └── quantum_hoare_test.rs          # Hoare contract, Multi-language coords & Circuit breaker (14 tests)
 ├── Cargo.toml                         # Tokio, Axum, Serde, Clap, Regex
 ├── install.ps1                        # 1-Liner PowerShell Enterprise Installer
 ├── feature_audit.md                   # Feature audit report across 16 Rules & Bug tracker

@@ -15,7 +15,11 @@ impl McpServer {
         for line_result in reader.lines() {
             let line = match line_result {
                 Ok(l) => l,
-                Err(ref e) if e.kind() == io::ErrorKind::BrokenPipe || e.raw_os_error() == Some(232) || e.raw_os_error() == Some(109) => {
+                Err(ref e)
+                    if e.kind() == io::ErrorKind::BrokenPipe
+                        || e.raw_os_error() == Some(232)
+                        || e.raw_os_error() == Some(109) =>
+                {
                     break;
                 }
                 Err(e) => return Err(e),
@@ -134,8 +138,14 @@ impl McpServer {
     }
 
     fn handle_tools_call(id: &Value, params: Option<&Value>) -> Value {
-        let tool_name = params.and_then(|p| p.get("name")).and_then(|n| n.as_str()).unwrap_or("");
-        let arguments = params.and_then(|p| p.get("arguments")).cloned().unwrap_or(json!({}));
+        let tool_name = params
+            .and_then(|p| p.get("name"))
+            .and_then(|n| n.as_str())
+            .unwrap_or("");
+        let arguments = params
+            .and_then(|p| p.get("arguments"))
+            .cloned()
+            .unwrap_or(json!({}));
 
         match tool_name {
             "gk_claim_done" => Self::handle_claim_done(id, &arguments),
@@ -162,7 +172,8 @@ impl McpServer {
             .and_then(|t| t.as_u64())
             .unwrap_or(2048) as usize;
 
-        let report = crate::domain::RepoMapGenerator::generate(Path::new(workspace_path), max_tokens);
+        let report =
+            crate::domain::RepoMapGenerator::generate(Path::new(workspace_path), max_tokens);
         json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -192,7 +203,7 @@ impl McpServer {
                     "content": [
                         {
                             "type": "text",
-                            "text": format!("✅ [CLAIM_DONE GRANTED] Gatekeeper verification passed. {} files scanned with zero invariant violations. Task concluded successfully.", audit.total_files_scanned)
+                            "text": format!("[OK] [CLAIM_DONE GRANTED] Gatekeeper verification passed. {} files scanned with zero invariant violations. Task concluded successfully.", audit.total_files_scanned)
                         }
                     ]
                 }
@@ -200,10 +211,21 @@ impl McpServer {
         } else {
             let mut violations_text = String::new();
             for (idx, v) in audit.violations.iter().take(10).enumerate() {
-                violations_text.push_str(&format!("\n{}. [{}] {}:{} — {} ({})", idx + 1, v.rule_identifier, v.file_path, v.line_number, v.description, v.snippet));
+                violations_text.push_str(&format!(
+                    "\n{}. [{}] {}:{} — {} ({})",
+                    idx + 1,
+                    v.rule_identifier,
+                    v.file_path,
+                    v.line_number,
+                    v.description,
+                    v.snippet
+                ));
             }
             if audit.violations.len() > 10 {
-                violations_text.push_str(&format!("\n... and {} more violations", audit.violations.len() - 10));
+                violations_text.push_str(&format!(
+                    "\n... and {} more violations",
+                    audit.violations.len() - 10
+                ));
             }
 
             json!({
@@ -214,7 +236,7 @@ impl McpServer {
                     "content": [
                         {
                             "type": "text",
-                            "text": format!("❌ [CLAIM_DONE REJECTED] Invariant violations detected on disk (Total: {}). You MUST refactor and fix all violations before concluding:{violations_text}", audit.violations.len())
+                            "text": format!("[FAIL] [CLAIM_DONE REJECTED] Invariant violations detected on disk (Total: {}). You MUST refactor and fix all violations before concluding:{violations_text}", audit.violations.len())
                         }
                     ]
                 }
@@ -230,11 +252,25 @@ impl McpServer {
 
         let audit = GatekeeperScanner::scan_path(Path::new(target_path), 70, 7);
         let summary = if audit.passed {
-            format!("✓ [GATEKEEPER PASS] Scanned {} files. Zero invariant violations detected.", audit.total_files_scanned)
+            format!(
+                "[OK] [GATEKEEPER PASS] Scanned {} files. Zero invariant violations detected.",
+                audit.total_files_scanned
+            )
         } else {
-            let mut details = format!("❌ [GATEKEEPER REJECT] {} violations detected across {} files:\n", audit.violations.len(), audit.total_files_scanned);
+            let mut details = format!(
+                "[FAIL] [GATEKEEPER REJECT] {} violations detected across {} files:\n",
+                audit.violations.len(),
+                audit.total_files_scanned
+            );
             for (idx, v) in audit.violations.iter().take(15).enumerate() {
-                details.push_str(&format!("\n{}. [{}] {}:{} — {}", idx + 1, v.rule_identifier, v.file_path, v.line_number, v.description));
+                details.push_str(&format!(
+                    "\n{}. [{}] {}:{} — {}",
+                    idx + 1,
+                    v.rule_identifier,
+                    v.file_path,
+                    v.line_number,
+                    v.description
+                ));
             }
             details
         };

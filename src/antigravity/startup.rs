@@ -50,12 +50,15 @@ pub fn configure_windows_startup(should_enable: bool) -> Result<bool, String> {
 
             Ok(execution_status.success())
         } else {
+            if !query_windows_startup_status() {
+                return Ok(true);
+            }
             let execution_status = Command::new("reg")
                 .args(["delete", STARTUP_REG_KEY, "/v", STARTUP_VALUE_NAME, "/f"])
                 .status()
                 .map_err(|error_descriptor| error_descriptor.to_string())?;
 
-            Ok(execution_status.success())
+            Ok(execution_status.success() || !query_windows_startup_status())
         }
     }
     #[cfg(not(target_os = "windows"))]

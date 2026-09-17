@@ -12,4 +12,3 @@ pub use server::LocalProxyServer;
 
 #[cfg(target_os = "windows")]
 pub use server::launch_desktop_card_window;
-

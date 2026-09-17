@@ -5,7 +5,7 @@
 [![Zero-Entropy CI](https://github.com/taurus42119-stack/godkiller-zero/actions/workflows/ci.yml/badge.svg)](https://github.com/taurus42119-stack/godkiller-zero/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Port: 4242](https://img.shields.io/badge/Port-4242-blueviolet.svg)](#)
-[![Tests: 52 Passed](https://img.shields.io/badge/Tests-52%2F52%20Passed-brightgreen.svg)](#)
+[![Tests: 66 Passed](https://img.shields.io/badge/Tests-66%2F66%20Passed-brightgreen.svg)](#)
 
 ---
 
@@ -29,7 +29,7 @@
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
-│ TIER 3: CI/CD Quality Gate (`godkiller-zero --gate .`)                  │
+│ TIER 3: CI/CD Quality Gate (`godkiller-console --gate .`)               │
 │ • Drops into GitHub Actions / GitLab CI pipelines                       │
 │ • Rejects Pull Requests that breach complexity or architecture rules    │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -46,9 +46,9 @@ irm https://raw.githubusercontent.com/taurus42119-stack/godkiller-zero/main/inst
 ```
 
 ### Option B: Portable Desktop App (No Installation Required)
-1. Download or launch `GodkillerZeroGui.exe` from `publish/` or project directory.
-2. Double-click `GodkillerZeroGui.exe`.
-3. The **GODKILLER ZORO 1.0** dashboard appears, creates a Desktop Shortcut, and docks to the Windows System Tray (beside the language switcher).
+1. Download or launch `GodkillerZero.exe` from `publish/` or project directory.
+2. Double-click `GodkillerZero.exe`.
+3. The **GODKILLER ZERO 1.0** dashboard appears, creates a Desktop Shortcut, and docks to the Windows System Tray (beside the language switcher).
 4. Click **`SHIELD`** to activate invariant guardrails across all AI clients (Cursor, Claude, Antigravity, Copilot)!
 
 ---
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run GODKILLER ZERO Gatekeeper
         run: |
-          ./godkiller-zero.exe --gate .
+          ./godkiller-console.exe --gate .
 ```
 
 ---
@@ -103,17 +103,17 @@ jobs:
 
 ```powershell
 # Run Disk Gatekeeper check on any project directory
-godkiller-zero --gate "D:\Projects\MyProject"
+godkiller-console --gate "D:\Projects\MyProject"
 
 # Install Git pre-commit hook into target project
-godkiller-zero --install-hook "D:\Projects\MyProject"
+godkiller-console --install-hook "D:\Projects\MyProject"
 
 # Manually hook/unhook IDEs globally
-godkiller-zero --hook
-godkiller-zero --unhook
+godkiller-console --hook
+godkiller-console --unhook
 
 # Launch without opening the GUI card window
-godkiller-zero --no-open
+godkiller-console --no-open
 ```
 
 ---

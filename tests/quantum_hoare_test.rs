@@ -209,9 +209,14 @@ fn test_circuit_breaker_lockdown_on_looping_intent() {
     let looping_intent = "ยังไม่ได้ พังเหมือนเดิม แก้ไม่หายสักที";
 
     let receipt = QuantumSuperpositionSimulator::simulate_superposition(looping_intent, &directive);
-    assert!(!receipt.collapse_allowed, "Circuit breaker must halt collapse");
+    assert!(
+        !receipt.collapse_allowed,
+        "Circuit breaker must halt collapse"
+    );
     assert_eq!(receipt.overall_fidelity, 0.0);
-    let breaker_spec = receipt.dense_symbolic_ir_spec.expect("Breaker IR must exist");
+    let breaker_spec = receipt
+        .dense_symbolic_ir_spec
+        .expect("Breaker IR must exist");
     assert!(breaker_spec.contains("[GK0:DIAGNOSTIC_CIRCUIT_BREAKER]"));
     assert!(breaker_spec.contains("REPEATED_FAILURE_LOCKDOWN"));
 }
@@ -229,11 +234,17 @@ fn test_invariant_rules_generation_omega() {
 fn test_negation_exemption_dont_forget() {
     use godkiller_zero::domain::LinguisticTranspiler;
     let intent = LinguisticTranspiler::transpile("don't forget to add tests for theme toggle");
-    assert!(!intent.is_negated, "Positive reminder 'don't forget' must not trigger negation PRESERVE");
+    assert!(
+        !intent.is_negated,
+        "Positive reminder 'don't forget' must not trigger negation PRESERVE"
+    );
     assert_ne!(intent.primary_action, "PRESERVE");
 
     let thai_intent = LinguisticTranspiler::transpile("อย่าลืมเขียนเทสด้วยนะ");
-    assert!(!thai_intent.is_negated, "Thai reminder 'อย่าลืม' must not trigger negation PRESERVE");
+    assert!(
+        !thai_intent.is_negated,
+        "Thai reminder 'อย่าลืม' must not trigger negation PRESERVE"
+    );
 }
 
 #[test]
@@ -244,8 +255,15 @@ fn test_gamma_invariant_fails_when_directive_exceeded() {
         "แก้ปุ่มใน src/components/ThemeToggle.tsx",
         &bad_directive,
     );
-    let gamma_branch = receipt.branches.iter().find(|b| b.branch_identifier == "GAMMA_INVARIANT_BUDGET").unwrap();
-    assert!(!gamma_branch.passed, "Gamma branch must report passed: false when CC > 7");
+    let gamma_branch = receipt
+        .branches
+        .iter()
+        .find(|b| b.branch_identifier == "GAMMA_INVARIANT_BUDGET")
+        .unwrap();
+    assert!(
+        !gamma_branch.passed,
+        "Gamma branch must report passed: false when CC > 7"
+    );
 }
 
 #[tokio::test]
@@ -281,5 +299,3 @@ async fn test_standalone_contract_synthesis_output() {
     assert!(synthesized_contract.contains("COGNITIVE PRE-FLIGHT COMPILER CONTRACT"));
     assert!(synthesized_contract.contains("GUARDRAILS & NEGATIVE INVARIANTS"));
 }
-
-

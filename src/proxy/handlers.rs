@@ -347,8 +347,10 @@ pub async fn hook_antigravity_api_handler(
     let hook_config = invocation_parameters.map(|p| p.0).unwrap_or_default();
     let discipline_mode = hook_config.discipline.unwrap_or_else(|| "KEN".to_string());
 
-    match crate::antigravity::hook_antigravity_with_rules(&discipline_mode, hook_config.rules.as_ref())
-    {
+    match crate::antigravity::hook_antigravity_with_rules(
+        &discipline_mode,
+        hook_config.rules.as_ref(),
+    ) {
         Ok(hook_dispatch_receipt) => Ok(Json(json!({
             "success": true,
             "message": hook_dispatch_receipt.message,
@@ -396,7 +398,8 @@ pub async fn purify_prompt_api_handler(
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::PathBuf::from("."));
 
-    let transpiled = crate::domain::LinguisticTranspiler::transpile_async(&sanitized_lexical_input).await;
+    let transpiled =
+        crate::domain::LinguisticTranspiler::transpile_async(&sanitized_lexical_input).await;
 
     let (discovered_coords, clarifier_options) =
         crate::domain::AstDiscoveryEngine::discover_with_tokens(
@@ -569,6 +572,7 @@ fn resolve_target_coordinate_and_blast(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_allowed_purify_payload(
     simulation_receipt: &crate::domain::QuantumSimulationReceipt,
     clarifier_options: Vec<crate::domain::ClarifierOption>,
@@ -701,27 +705,47 @@ pub struct ProjectConfigExportPayload {
 fn validate_safe_workspace_directory(
     candidate_path: Option<&str>,
 ) -> Result<std::path::PathBuf, (StatusCode, String)> {
-    let raw_path = candidate_path.unwrap_or(".");
-    let target = std::path::PathBuf::from(raw_path);
+    let raw_path = candidate_path.unwrap_or(".").trim();
+    let effective_path = if raw_path.is_empty() { "." } else { raw_path };
+    let target = std::path::PathBuf::from(effective_path);
 
-    if target
-        .components()
-        .any(|component| matches!(component, std::path::Component::ParentDir))
-    {
+    let canonical = target.canonicalize().map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Target workspace '{}' does not exist or is not accessible.",
+                target.display()
+            ),
+        )
+    })?;
+
+    if !canonical.is_dir() {
         return Err((
             StatusCode::BAD_REQUEST,
-            "Directory traversal components ('..') are strictly prohibited.".into(),
+            format!(
+                "Target workspace '{}' is not a directory.",
+                canonical.display()
+            ),
         ));
     }
 
-    if !target.exists() || !target.is_dir() {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let cwd_canonical = cwd.canonicalize().unwrap_or(cwd);
+
+    let is_within_cwd = canonical.starts_with(&cwd_canonical);
+    let is_project_repo = canonical.join(".git").exists() || canonical.join(".agents").exists();
+
+    if !is_within_cwd && !is_project_repo {
         return Err((
-            StatusCode::BAD_REQUEST,
-            format!("Target workspace '{}' is not a valid existing directory.", target.display()),
+            StatusCode::FORBIDDEN,
+            format!(
+                "Access denied: '{}' is outside active project boundary and lacks project markers (.git/.agents).",
+                canonical.display()
+            ),
         ));
     }
 
-    Ok(target)
+    Ok(canonical)
 }
 
 pub async fn install_gate_api_handler(
@@ -730,7 +754,11 @@ pub async fn install_gate_api_handler(
     let raw_workspace = if !body.is_empty() {
         serde_json::from_slice::<serde_json::Value>(&body)
             .ok()
-            .and_then(|val| val.get("workspace_path").and_then(|p| p.as_str()).map(String::from))
+            .and_then(|val| {
+                val.get("workspace_path")
+                    .and_then(|p| p.as_str())
+                    .map(String::from)
+            })
     } else {
         None
     };
@@ -790,7 +818,22 @@ pub async fn toggle_interpreter_api_handler(
     let new_state = !previous_state;
 
     if new_state {
-        let _ = crate::antigravity::hook_antigravity("KEN");
+        let active_discipline = match runtime_state
+            .anti_spaghetti_directive
+            .max_cyclomatic_complexity
+        {
+            10 => "SHI",
+            5 => "SHIN",
+            _ => {
+                let hook_state = crate::antigravity::query_antigravity_hook_state();
+                match hook_state.discipline.to_uppercase().as_str() {
+                    "SHI" => "SHI",
+                    "SHIN" => "SHIN",
+                    _ => "KEN",
+                }
+            }
+        };
+        let _ = crate::antigravity::hook_antigravity(active_discipline);
     } else {
         let _ = crate::antigravity::unhook_antigravity();
     }
@@ -850,4 +893,3 @@ pub async fn prune_terminal_api_handler(
     }
     Json(prune_verdict)
 }
-

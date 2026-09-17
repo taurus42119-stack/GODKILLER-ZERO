@@ -88,7 +88,23 @@ impl TriPillarEvaluator {
 
     fn is_conversational_greeting(prompt_text: &str) -> bool {
         let action_markers = [
-            "แก้", "เพิ่ม", "ลบ", "สร้าง", "ช่วย", "ดู", "ทำ", "fix", "add", "remove", "create", "help", "debug", "refactor", "run", "test", "check"
+            "แก้",
+            "เพิ่ม",
+            "ลบ",
+            "สร้าง",
+            "ช่วย",
+            "ดู",
+            "ทำ",
+            "fix",
+            "add",
+            "remove",
+            "create",
+            "help",
+            "debug",
+            "refactor",
+            "run",
+            "test",
+            "check",
         ];
         let lower = prompt_text.to_lowercase();
         if action_markers.iter().any(|&marker| lower.contains(marker)) {
@@ -123,24 +139,28 @@ impl TriPillarEvaluator {
 
     fn extract_target_file(prompt_text: &str) -> Option<String> {
         let valid_extensions = [
-            "rs", "cs", "ts", "tsx", "js", "jsx", "py", "go", "toml", "json",
-            "md", "html", "css", "sql", "yaml", "yml", "sh", "bat", "ps1",
-            "txt", "c", "cpp", "h", "hpp", "java", "kt", "swift", "rb", "php",
+            "rs", "cs", "ts", "tsx", "js", "jsx", "py", "go", "toml", "json", "md", "html", "css",
+            "sql", "yaml", "yml", "sh", "bat", "ps1", "txt", "c", "cpp", "h", "hpp", "java", "kt",
+            "swift", "rb", "php",
         ];
 
         for token in prompt_text.split_whitespace() {
-            let clean = token.trim_matches(['"', '\'', '(', ')', '[', ']', '{', '}', ':', ',', ';', '<', '>']);
-            if let Some((_, extension_candidate)) = clean.rsplit_once('.') {
-                let extension_lower = extension_candidate.to_lowercase();
-                if valid_extensions.contains(&extension_lower.as_str()) {
-                    let normalized_path = clean.replace('\\', "/");
-                    let path_segments: Vec<&str> = normalized_path.split('/').collect();
-                    if let Some(basename_candidate) = path_segments.last() {
-                        if !basename_candidate.is_empty() && basename_candidate.contains('.') {
-                            return Some(normalized_path);
-                        }
-                    }
-                }
+            let clean = token.trim_matches([
+                '"', '\'', '(', ')', '[', ']', '{', '}', ':', ',', ';', '<', '>',
+            ]);
+            let Some((_, extension_candidate)) = clean.rsplit_once('.') else {
+                continue;
+            };
+            let extension_lower = extension_candidate.to_lowercase();
+            if !valid_extensions.contains(&extension_lower.as_str()) {
+                continue;
+            }
+            let normalized_path = clean.replace('\\', "/");
+            let Some(basename_candidate) = normalized_path.split('/').next_back() else {
+                continue;
+            };
+            if !basename_candidate.is_empty() && basename_candidate.contains('.') {
+                return Some(normalized_path);
             }
         }
         None

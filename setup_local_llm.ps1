@@ -102,11 +102,11 @@ if (-not $modelPresent) {
 
 # 4. Launch GUI Application
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$guiExe = Join-Path $scriptDir "GodkillerZeroGui.exe"
+$guiExe = if (Test-Path (Join-Path $scriptDir "GodkillerZero.exe")) { Join-Path $scriptDir "GodkillerZero.exe" } else { Join-Path $scriptDir "GodkillerZeroGui.exe" }
 
 Write-Host "Launching GODKILLER ZERO..." -ForegroundColor Green
 if (Test-Path $guiExe) {
     Start-Process -FilePath $guiExe
 } else {
-    Write-Host "GodkillerZeroGui.exe ready at $guiExe" -ForegroundColor Yellow
+    Write-Host "GodkillerZero.exe ready at $guiExe" -ForegroundColor Yellow
 }
