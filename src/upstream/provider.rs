@@ -74,18 +74,29 @@ impl UpstreamLlmGateway for LocalZeroEngine {
         &self,
         request: ChatCompletionInboundRequest,
     ) -> Result<String, String> {
-        let user_query = extract_latest_user_text(&request);
+        let enriched_query = extract_latest_user_text(&request);
+        let user_query = strip_appended_compliance_contract(&enriched_query);
 
-        if is_thai_or_english_greeting(&user_query) {
+        if is_thai_or_english_greeting(user_query) {
             return Ok(build_greeting_response());
         }
 
+        // A short connect timeout keeps the offline fallback instant when no local
+        // engine is listening, while the request timeout must outlive real CPU-bound
+        // generation (a 1.5B model on CPU routinely needs well over ten seconds).
         let http_client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(3))
+            .connect_timeout(std::time::Duration::from_secs(2))
+            .timeout(std::time::Duration::from_secs(180))
             .build()
             .unwrap_or_default();
 
-        if let Ok(local_text) = try_local_llm_forward(&http_client, &request).await {
+        let resolved_model = self
+            .bootstrap_manager
+            .as_ref()
+            .map(|manager| manager.target_model_name().to_string());
+        if let Ok(local_text) =
+            try_local_llm_forward(&http_client, &request, resolved_model.as_deref()).await
+        {
             return Ok(local_text);
         }
 
@@ -96,8 +107,21 @@ impl UpstreamLlmGateway for LocalZeroEngine {
             }
         }
 
-        Ok(synthesize_real_preflight_contract(&user_query))
+        Ok(synthesize_real_preflight_contract(user_query))
     }
+}
+
+const COMPLIANCE_CONTRACT_MARKER: &str = "/* [GODKILLER ZERO COMPLIANCE CONTRACT] */";
+
+/// The ingress stage appends a compiled contract to the user message before it
+/// reaches this gateway. Offline synthesis must reason about the original intent,
+/// otherwise the contract gets restated inside its own body.
+fn strip_appended_compliance_contract(enriched_query: &str) -> &str {
+    enriched_query
+        .split(COMPLIANCE_CONTRACT_MARKER)
+        .next()
+        .unwrap_or(enriched_query)
+        .trim()
 }
 
 fn extract_latest_user_text(request: &ChatCompletionInboundRequest) -> String {
@@ -160,14 +184,29 @@ async fn probe_single_endpoint(
 async fn try_local_llm_forward(
     client: &reqwest::Client,
     request: &ChatCompletionInboundRequest,
+    provisioned_model: Option<&str>,
 ) -> Result<String, ()> {
     let local_endpoints = [
         ("http://127.0.0.1:11434/v1/chat/completions", "Ollama"),
         ("http://127.0.0.1:1234/v1/chat/completions", "LM Studio"),
     ];
+    // An IDE typically names a cloud model the local engine has never heard of,
+    // which the engine answers with 404. Retry such rejections against the model
+    // this machine actually provisioned before conceding to offline synthesis.
+    let retry_model = provisioned_model.filter(|candidate| *candidate != request.model);
 
     for (endpoint, provider_name) in local_endpoints {
         if let Some(content) = probe_single_endpoint(client, request, endpoint, provider_name).await
+        {
+            return Ok(content);
+        }
+        let Some(local_model) = retry_model else {
+            continue;
+        };
+        let mut retargeted_request = request.clone();
+        retargeted_request.model = local_model.to_string();
+        if let Some(content) =
+            probe_single_endpoint(client, &retargeted_request, endpoint, provider_name).await
         {
             return Ok(content);
         }
@@ -217,9 +256,9 @@ fn synthesize_real_preflight_contract(raw_query: &str) -> String {
     } else {
         for coord in &discovered_coords {
             target_files_section.push_str(&format!(
-                "• Target: {} (Confidence: {:.0}%)\n",
+                "• Target: {} (path/name keyword overlap: {:.0}%)\n",
                 coord.file_path,
-                coord.match_confidence * 100.0
+                coord.name_match_strength * 100.0
             ));
         }
     }

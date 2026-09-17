@@ -104,9 +104,9 @@ static class Program
                 Console.WriteLine($"STATUS: Hooked={hooked}, Discipline={disc}");
                 return;
             }
-            if (cmd == "--test")
+            if (cmd == "--audit-matrix")
             {
-                RunSelfTest();
+                Environment.ExitCode = RulesMatrixAudit.Run();
                 return;
             }
         }
@@ -255,61 +255,4 @@ static class Program
         }
     }
 
-    private static void RunSelfTest()
-    {
-        Console.WriteLine("[TEST] Starting GodkillerZeroGui Self-Test...");
-        
-        // 1. Test Unhook
-        bool unhookOk = HookEngine.Unhook();
-        System.Threading.Thread.Sleep(50);
-        Console.WriteLine($"[TEST] Unhook: {unhookOk} (IsHooked={HookEngine.IsHooked()})");
-        if (HookEngine.IsHooked()) throw new Exception("Expected IsHooked == false after Unhook");
-
-        // 2. Test Workspace Resolution
-        string workspace = HookEngine.ResolveActiveWorkspaceRoot();
-        Console.WriteLine($"[TEST] ResolveActiveWorkspaceRoot: {workspace}");
-        if (string.IsNullOrEmpty(workspace) || !Directory.Exists(workspace))
-            throw new Exception("Expected valid workspace directory");
-
-        // 3. Test Hook KEN with RepoMap = true
-        var optionsWithMap = HookEngine.GetOptionsForDiscipline("KEN");
-        optionsWithMap.RepoMap = true;
-        bool hookOk = HookEngine.Hook("KEN", optionsWithMap);
-        System.Threading.Thread.Sleep(50);
-        Console.WriteLine($"[TEST] Hook KEN (RepoMap=true): {hookOk} (IsHooked={HookEngine.IsHooked()}, Discipline={HookEngine.GetCurrentDiscipline()})");
-        if (!HookEngine.IsHooked()) throw new Exception("Expected IsHooked == true after Hook");
-        if (HookEngine.GetCurrentDiscipline() != "KEN") throw new Exception("Expected Discipline == KEN");
-
-        // Verify LoadOptionsFromDisk recognizes RepoMap = true
-        var loadedOptions = HookEngine.LoadOptionsFromDisk();
-        Console.WriteLine($"[TEST] LoadOptionsFromDisk RepoMap={loadedOptions.RepoMap}");
-        if (!loadedOptions.RepoMap) throw new Exception("Expected loadedOptions.RepoMap == true");
-
-        // 4. Test Hook KEN with RepoMap = false
-        var optionsWithoutMap = HookEngine.GetOptionsForDiscipline("KEN");
-        optionsWithoutMap.RepoMap = false;
-        bool hookNoMapOk = HookEngine.Hook("KEN", optionsWithoutMap);
-        System.Threading.Thread.Sleep(50);
-        var loadedNoMap = HookEngine.LoadOptionsFromDisk();
-        Console.WriteLine($"[TEST] Hook KEN (RepoMap=false): {hookNoMapOk}, Loaded RepoMap={loadedNoMap.RepoMap}");
-        if (loadedNoMap.RepoMap) throw new Exception("Expected loadedOptions.RepoMap == false");
-
-        // 5. Test Hook SHIN with RepoMap = true
-        bool hookShinOk = HookEngine.Hook("SHIN");
-        System.Threading.Thread.Sleep(50);
-        Console.WriteLine($"[TEST] Hook SHIN: {hookShinOk} (IsHooked={HookEngine.IsHooked()}, Discipline={HookEngine.GetCurrentDiscipline()})");
-        if (HookEngine.GetCurrentDiscipline() != "SHIN") throw new Exception("Expected Discipline == SHIN");
-        var loadedShin = HookEngine.LoadOptionsFromDisk();
-        if (!loadedShin.RepoMap) throw new Exception("Expected SHIN preset to have RepoMap == true");
-
-        // 6. Test TriggerRepoMapGeneration
-        HookEngine.TriggerRepoMapGeneration();
-        Console.WriteLine("[TEST] TriggerRepoMapGeneration executed successfully without throwing.");
-
-        // 7. Restore KEN state
-        HookEngine.Hook("KEN");
-        System.Threading.Thread.Sleep(50);
-
-        Console.WriteLine("[TEST] ALL SELF-TESTS PASSED SUCCESSFULLY!");
-    }
 }

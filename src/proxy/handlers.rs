@@ -25,6 +25,9 @@ pub struct ProxyRuntimeState {
     pub requests_intercepted_counter: Arc<AtomicU64>,
     pub interpreter_active: Arc<AtomicBool>,
     pub bootstrap_manager: Option<Arc<OllamaBootstrapManager>>,
+    /// Port the loopback listener was actually bound to, so telemetry reports the
+    /// live endpoint instead of the documented default.
+    pub bound_port: u16,
 }
 
 pub async fn list_models_handler() -> Json<serde_json::Value> {
@@ -104,7 +107,7 @@ fn process_interpreter_enrichment(
         .unwrap_or(&sanitized_prompt_stream);
 
     let fast_evaluation = TriPillarEvaluator::evaluate_prompt(prompt_to_evaluate);
-    if let IngressEvaluationVerdict::ConversationalGreeting { greeting_text: _ } = fast_evaluation {
+    if fast_evaluation == IngressEvaluationVerdict::ConversationalGreeting {
         let greeting_reply =
             "สวัสดีครับ GODKILLER ZERO ประจำการอยู่บนเครื่อง Local ของคุณแล้ว (0 Cloud Tokens)\n\
              พร้อมเป็นล่ามแปลภาษาและตีกรอบบริบทสำหรับงานพัฒนาโค้ด\n\
@@ -162,6 +165,12 @@ fn enrich_envelope_with_compiled_contract(
         prompt_to_evaluate,
         &runtime_state.anti_spaghetti_directive,
     );
+
+    if !simulation_receipt.dispatch_allowed {
+        runtime_state
+            .halts_enforced_counter
+            .fetch_add(1, Ordering::Relaxed);
+    }
 
     let contract_spec_opt = simulation_receipt
         .diagnostic_spec
@@ -262,7 +271,7 @@ pub async fn metrics_handler(State(state): State<ProxyRuntimeState>) -> Json<ser
     let is_hooked = crate::antigravity::is_antigravity_hooked();
     Json(json!({
         "status": "ACTIVE",
-        "port": 4242,
+        "port": state.bound_port,
         "antigravity_hooked": is_hooked,
         "metrics": {
             "requests_intercepted": state.requests_intercepted_counter.load(Ordering::Relaxed),
@@ -489,11 +498,8 @@ fn build_greeting_purify_envelope(
 ) -> serde_json::Value {
     json!({
         "verdict": "CONVERSATIONAL_BYPASS",
-        "compiled_ir": transpiled.concise_english,
         "dense_ir": transpiled.concise_english,
-        "translated_action": "Conversational Greeting",
         "concise_english": transpiled.concise_english,
-        "fidelity": 1.0,
         "branches": [],
         "quick_fixes": [],
         "clarifiers": clarifiers,
@@ -515,10 +521,8 @@ fn build_circuit_breaker_purify_envelope(
     );
     json!({
         "verdict": "CIRCUIT_BREAKER_LOCKDOWN",
-        "compiled_ir": breaker_spec,
         "dense_ir": breaker_spec,
-        "translated_action": transpiled.technical_action_summary,
-        "fidelity": 0.5,
+        "concise_english": transpiled.technical_action_summary,
         "circuit_breaker": true,
         "branches": [],
         "quick_fixes": [],
@@ -535,10 +539,8 @@ fn build_fast_lane_purify_envelope(
 ) -> serde_json::Value {
     json!({
         "verdict": "FAST_LANE",
-        "compiled_ir": prompt_text,
         "dense_ir": prompt_text,
-        "translated_action": prompt_text,
-        "fidelity": 1.0,
+        "concise_english": prompt_text,
         "branches": [],
         "quick_fixes": [],
         "clarifiers": clarifiers,
@@ -587,17 +589,14 @@ fn render_allowed_purify_payload(
 ) -> serde_json::Value {
     json!({
         "verdict": "DISPATCH_ALLOWED",
-        "compliance": simulation_receipt.overall_compliance,
-        "fidelity": simulation_receipt.overall_compliance,
+        "satisfied_branch_ratio": simulation_receipt.satisfied_branch_ratio,
         "branches": simulation_receipt.branches,
         "quick_fixes": simulation_receipt.quick_fixes,
         "clarifiers": clarifier_options,
         "discovered_coordinates": discovered_coords,
-        "compiled_ir": transpiled.concise_english,
         "dense_ir": transpiled.concise_english,
         "formal_contract": dense_ir_output,
         "hoare_ir": hoare_contract_output,
-        "translated_action": transpiled.concise_english,
         "concise_english": transpiled.concise_english,
         "detected_components": transpiled.detected_components,
         "styling_tokens": transpiled.styling_tokens,
@@ -683,13 +682,16 @@ fn build_purified_simulation_response(
     } else {
         json!({
             "verdict": "HALT_INQUISITIVE",
-            "compliance": simulation_receipt.overall_compliance,
-            "fidelity": simulation_receipt.overall_compliance,
+            "satisfied_branch_ratio": simulation_receipt.satisfied_branch_ratio,
             "branches": simulation_receipt.branches,
             "quick_fixes": simulation_receipt.quick_fixes,
             "clarifiers": clarifier_options,
             "discovered_coordinates": discovered_coords,
-            "message": "Contract evaluation halted: Missing target coordinate or under-specified state transition.",
+            "dense_ir": simulation_receipt.diagnostic_spec,
+            "message": simulation_receipt
+                .technical_action_summary
+                .as_deref()
+                .unwrap_or("Contract evaluation halted before dispatch."),
         })
     }
 }

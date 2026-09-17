@@ -133,6 +133,36 @@ impl IngressSecuritySanitizer {
 pub struct EgressFluffStripper;
 
 impl EgressFluffStripper {
+    /// Matches a marker only at a word boundary so that technical prose is not
+    /// mistaken for filler: "this ensures the invariant holds" must survive even
+    /// though it contains the letters of the marker "sure".
+    fn contains_marker_at_word_boundary(lower_line: &str, marker: &str) -> bool {
+        // Thai is written without inter-word spacing, so a boundary test would
+        // reject every legitimate hit; substring matching is correct there.
+        if !marker.is_ascii() {
+            return lower_line.contains(marker);
+        }
+
+        let mut search_offset = 0;
+        while let Some(relative_hit) = lower_line[search_offset..].find(marker) {
+            let hit_start = search_offset + relative_hit;
+            let hit_end = hit_start + marker.len();
+            let preceded_by_word = lower_line[..hit_start]
+                .chars()
+                .next_back()
+                .is_some_and(char::is_alphanumeric);
+            let followed_by_word = lower_line[hit_end..]
+                .chars()
+                .next()
+                .is_some_and(char::is_alphanumeric);
+            if !preceded_by_word && !followed_by_word {
+                return true;
+            }
+            search_offset = hit_end;
+        }
+        false
+    }
+
     fn is_pure_conversational_line(line: &str) -> bool {
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -159,8 +189,60 @@ impl EgressFluffStripper {
         ];
         let has_marker = fluff_markers
             .iter()
-            .any(|&fluff| lower.starts_with(fluff) || lower.contains(fluff));
+            .any(|&fluff| Self::contains_marker_at_word_boundary(&lower, fluff));
         has_marker && trimmed.len() <= 100
+    }
+
+    fn drop_leading_fluff_lines(segment: &str) -> (Vec<String>, bool) {
+        let mut surviving_lines: Vec<String> = segment.lines().map(str::to_owned).collect();
+        let mut stripped_any = false;
+
+        while surviving_lines
+            .first()
+            .is_some_and(|line| line.trim().is_empty() || Self::is_pure_conversational_line(line))
+        {
+            surviving_lines.remove(0);
+            stripped_any = true;
+        }
+
+        (surviving_lines, stripped_any)
+    }
+
+    /// Removes an opening filler clause while keeping the substance that follows it
+    /// on the same line, so "Certainly, rename the field" yields "rename the field"
+    /// instead of being discarded whole.
+    fn trim_leading_fluff_clause(line: &str) -> Option<String> {
+        let clause_end = line.find(['!', '.', ',', ':', '?'])?;
+        let (opening_clause, remainder) = line.split_at(clause_end + 1);
+        let remainder = remainder.trim();
+        if remainder.is_empty() || !Self::is_pure_conversational_line(opening_clause) {
+            return None;
+        }
+        Some(remainder.to_owned())
+    }
+
+    fn purify_prose_head(segment: &str) -> Option<String> {
+        let (mut surviving_lines, mut was_modified) = Self::drop_leading_fluff_lines(segment);
+
+        if let Some(first_line) = surviving_lines.first() {
+            if let Some(trimmed_clause) = Self::trim_leading_fluff_clause(first_line) {
+                surviving_lines[0] = trimmed_clause;
+                was_modified = true;
+            }
+        }
+        if !was_modified {
+            return None;
+        }
+        Some(surviving_lines.join("\n"))
+    }
+
+    /// Last resort for a reply that is filler end to end: keep the question or
+    /// instruction that follows the filler rather than handing back an empty reply.
+    fn salvage_substantive_clause(segment: &str) -> Option<String> {
+        segment
+            .lines()
+            .next()
+            .and_then(Self::trim_leading_fluff_clause)
     }
 
     #[must_use]
@@ -170,30 +252,23 @@ impl EgressFluffStripper {
             return raw_stream.to_string();
         }
 
-        let Some(pos) = trimmed.find("```") else {
+        // A reply carrying no code fence is still subject to the fluff budget:
+        // a bare "Sure! Can you clarify?" must not reach the editor untouched.
+        let Some(fence_offset) = trimmed.find("```") else {
+            let purified_prose = Self::purify_prose_head(trimmed)
+                .map(|purified| purified.trim().to_owned())
+                .filter(|purified| !purified.is_empty())
+                .or_else(|| Self::salvage_substantive_clause(trimmed));
+            return purified_prose.unwrap_or_else(|| raw_stream.to_string());
+        };
+
+        let preamble = &trimmed[..fence_offset];
+        let code_block = &trimmed[fence_offset..];
+        let Some(remaining_preamble) = Self::purify_prose_head(preamble) else {
             return raw_stream.to_string();
         };
 
-        let preamble = &trimmed[..pos];
-        let code_block = &trimmed[pos..];
-
-        let mut lines: Vec<&str> = preamble.lines().collect();
-        let mut stripped_any = false;
-
-        while let Some(first_line) = lines.first() {
-            if first_line.trim().is_empty() || Self::is_pure_conversational_line(first_line) {
-                lines.remove(0);
-                stripped_any = true;
-            } else {
-                break;
-            }
-        }
-
-        if !stripped_any {
-            return raw_stream.to_string();
-        }
-
-        let remaining_preamble = lines.join("\n").trim().to_string();
+        let remaining_preamble = remaining_preamble.trim();
         if remaining_preamble.is_empty() {
             code_block.to_string()
         } else {
@@ -223,6 +298,31 @@ mod tests {
     #[test]
     fn test_preserve_direct_code_fence() {
         let input = "```typescript\nexport const ok = true;\n```";
+        let actual = EgressFluffStripper::strip_conversational_fluff(input);
+        assert_eq!(actual, input);
+    }
+
+    #[test]
+    fn test_strip_fluff_from_reply_without_code_fence() {
+        let input = "Sure! Can you provide the code snippet you need to fix?";
+        let actual = EgressFluffStripper::strip_conversational_fluff(input);
+        assert_eq!(actual, "Can you provide the code snippet you need to fix?");
+    }
+
+    #[test]
+    fn test_strip_leading_clause_but_keep_substance_on_same_line() {
+        let input =
+            "Certainly, rename the field to invoice_total and update every call site accordingly.";
+        let actual = EgressFluffStripper::strip_conversational_fluff(input);
+        assert_eq!(
+            actual,
+            "rename the field to invoice_total and update every call site accordingly."
+        );
+    }
+
+    #[test]
+    fn test_preserve_prose_containing_marker_inside_a_word() {
+        let input = "This ensures the invariant holds.\n\n```rust\nfn main() {}\n```";
         let actual = EgressFluffStripper::strip_conversational_fluff(input);
         assert_eq!(actual, input);
     }

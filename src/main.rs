@@ -38,42 +38,59 @@ unsafe fn attach_parent_console_if_cli() {
     about = "GODKILLER ZERO: Cognitive Pre-flight Firewall & Semantic IR Compiler for Google Antigravity"
 )]
 struct CliArguments {
+    /// Loopback port for the local proxy server (127.0.0.1 only)
     #[arg(short, long, default_value_t = 4242)]
     port: u16,
 
+    /// Strictness preset: KEN (span 70 / CC 7), SHI (90 / 10), SHIN (50 / 5)
     #[arg(short, long, default_value = "KEN")]
     discipline: String,
 
+    /// Inject the invariant rule block into every detected IDE config file
     #[arg(long)]
     hook: bool,
 
+    /// Remove previously injected invariant rule blocks from IDE config files
     #[arg(long)]
     unhook: bool,
 
-    #[arg(long, visible_alias = "simulate")]
+    /// Rewrite a vague prompt into an explicit engineering instruction
+    #[arg(long, visible_alias = "simulate", value_name = "PROMPT")]
     purify: Option<String>,
 
-    #[arg(long)]
+    /// Audit a directory on disk and exit non-zero on any invariant violation
+    #[arg(long, value_name = "PATH")]
     gate: Option<Option<String>>,
 
-    #[arg(long)]
+    /// Install the gate as a git pre-commit hook in the target repository
+    #[arg(long, value_name = "PATH")]
     install_hook: Option<Option<String>>,
 
+    /// Serve the gatekeeper tools over the Model Context Protocol on stdio
     #[arg(long)]
     mcp: bool,
 
-    #[arg(long)]
+    /// Emit a token-budgeted symbol map of the target codebase to stdout
+    #[arg(long, value_name = "PATH")]
     repo_map: Option<Option<String>>,
 
-    #[arg(long, num_args = 1.., trailing_var_arg = true, allow_hyphen_values = true)]
+    /// Also save the symbol map to this file (nothing is written without it)
+    #[arg(long, value_name = "FILE", requires = "repo_map")]
+    repo_map_out: Option<String>,
+
+    /// Run a command and print its output with framework noise collapsed
+    #[arg(long, num_args = 1.., trailing_var_arg = true, allow_hyphen_values = true, value_name = "COMMAND")]
     run: Option<Vec<String>>,
 
-    #[arg(long, allow_hyphen_values = true)]
+    /// Prune a log: pass text, a file path, or "-" to read stdin
+    #[arg(long, allow_hyphen_values = true, value_name = "TEXT|PATH|-")]
     prune: Option<String>,
 
+    /// Start the server without opening the desktop card window
     #[arg(long, default_value_t = false)]
     no_open: bool,
 
+    /// Start the desktop card window minimised to the tray
     #[arg(long, default_value_t = false)]
     minimized: bool,
 }
@@ -132,7 +149,10 @@ fn dispatch_secondary_commands(
         ));
     }
     if let Some(target_dir_opt) = &arguments.repo_map {
-        return Some(run_repo_map_command(target_dir_opt.clone()));
+        return Some(run_repo_map_command(
+            target_dir_opt.clone(),
+            arguments.repo_map_out.as_deref(),
+        ));
     }
     if let Some(cmd_args) = &arguments.run {
         return Some(run_terminal_command(cmd_args));
@@ -143,7 +163,10 @@ fn dispatch_secondary_commands(
         .map(|raw_text| run_prune_command(raw_text))
 }
 
-fn run_repo_map_command(target_dir_opt: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_repo_map_command(
+    target_dir_opt: Option<String>,
+    export_destination: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let target_dir_str = target_dir_opt.unwrap_or_else(|| ".".to_string());
     let target_dir = std::path::Path::new(&target_dir_str);
     let report = godkiller_zero::domain::RepoMapGenerator::generate(target_dir, 2048);
@@ -152,8 +175,13 @@ fn run_repo_map_command(target_dir_opt: Option<String>) -> Result<(), Box<dyn st
         "\n[OK] [REPO MAP GENERATED] Total files: {}, Symbols indexed: {}, Estimated tokens: {}",
         report.total_files, report.total_symbols, report.estimated_tokens
     );
-    if let Some(ref path) = report.output_file_path {
-        println!("Exported to: {}", path.display());
+
+    if let Some(destination_str) = export_destination {
+        let written_path = godkiller_zero::domain::RepoMapGenerator::export(
+            std::path::Path::new(destination_str),
+            &report.map_content,
+        )?;
+        println!("Exported to: {}", written_path.display());
     }
     Ok(())
 }
@@ -335,15 +363,27 @@ fn run_terminal_command(cmd_args: &[String]) -> Result<(), Box<dyn std::error::E
     Ok(())
 }
 
-fn run_prune_command(raw_text: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let input = if raw_text == "-" || raw_text.trim().is_empty() {
+fn resolve_prune_input(raw_text: &str) -> Result<String, Box<dyn std::error::Error>> {
+    if raw_text == "-" || raw_text.trim().is_empty() {
         use std::io::Read;
         let mut buffer = String::new();
         std::io::stdin().read_to_string(&mut buffer)?;
-        buffer
-    } else {
-        raw_text.to_string()
-    };
+        return Ok(buffer);
+    }
+
+    // A single-line argument naming a real file is a path to the log, not the log
+    // itself: Windows caps a command line near 32 KB, so anything sizeable has to
+    // arrive as a file or over stdin.
+    let may_be_path = !raw_text.contains('\n') && raw_text.len() < 260;
+    if may_be_path && std::path::Path::new(raw_text).is_file() {
+        return Ok(std::fs::read_to_string(raw_text)?);
+    }
+
+    Ok(raw_text.to_string())
+}
+
+fn run_prune_command(raw_text: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let input = resolve_prune_input(raw_text)?;
 
     let prune_result = godkiller_zero::domain::TerminalPruner::prune(&input);
     print!("{}", prune_result.pruned_content);
@@ -385,6 +425,7 @@ async fn run_server_mode(arguments: &CliArguments) -> Result<(), Box<dyn std::er
         requests_intercepted_counter: Arc::new(AtomicU64::new(0)),
         interpreter_active: Arc::new(std::sync::atomic::AtomicBool::new(true)),
         bootstrap_manager: Some(bootstrap_manager),
+        bound_port: arguments.port,
     };
 
     let proxy_server = LocalProxyServer::new(arguments.port, runtime_state);
@@ -467,7 +508,7 @@ fn setup_system_tray(bind_port: u16) -> Option<tray_item::TrayItem> {
 
 fn print_zen_banner(port: u16, discipline: &str, is_shielded: bool) {
     let hook_status_label = if is_shielded {
-        "SHIELDED (Injected in GEMINI.md)"
+        "SHIELDED (host-native rule sinks)"
     } else {
         "NOT HOOKED (Run --hook or click UI)"
     };

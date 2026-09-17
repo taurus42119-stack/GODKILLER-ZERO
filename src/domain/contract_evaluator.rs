@@ -21,37 +21,26 @@ pub struct QuickFixAction {
     pub action_identifier: String,
     pub display_label: String,
     pub replacement_target: String,
-    #[serde(default)]
-    pub action_payload: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InvariantBranchResult {
     pub branch_identifier: String,
     pub passed: bool,
-    #[serde(alias = "fidelity_score")]
-    pub compliance_score: f32,
     pub diagnostic_message: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ContractEvaluationReceipt {
-    #[serde(alias = "collapse_allowed")]
     pub dispatch_allowed: bool,
-    #[serde(alias = "overall_fidelity")]
-    pub overall_compliance: f32,
+    /// Fraction of the four invariant branches that reported `passed`.
+    pub satisfied_branch_ratio: f32,
     pub branches: Vec<InvariantBranchResult>,
     pub quick_fixes: Vec<QuickFixAction>,
-    #[serde(alias = "hoare_contract_spec")]
     pub contract_spec: Option<String>,
-    #[serde(alias = "dense_symbolic_ir_spec")]
     pub diagnostic_spec: Option<String>,
     pub technical_action_summary: Option<String>,
 }
-
-pub type QuantumBranchState = InvariantBranchResult;
-pub type QuantumSimulationReceipt = ContractEvaluationReceipt;
-pub type QuantumSuperpositionSimulator = InvariantContractEvaluator;
 
 pub struct InvariantContractEvaluator;
 
@@ -70,28 +59,25 @@ impl InvariantContractEvaluator {
         let branch_delta = Self::evaluate_branch_delta_containment(trimmed_input);
 
         let branches = vec![branch_alpha, branch_beta, branch_gamma, branch_delta];
-        let average_compliance: f32 =
-            branches.iter().map(|b| b.compliance_score).sum::<f32>() / (branches.len() as f32);
+        let satisfied_branch_ratio =
+            branches.iter().filter(|b| b.passed).count() as f32 / (branches.len() as f32);
 
         let quick_fixes = Self::generate_coordinate_quick_fixes(trimmed_input);
         let coordinate_slice = Self::resolve_target_coordinate(target_candidate, trimmed_input);
         let transpiled =
             super::linguistic_transpiler::LinguisticTranspiler::transpile(trimmed_input);
 
-        if transpiled.circuit_breaker_triggered {
-            let breaker_spec = super::formal_contract::HoareContract::render_circuit_breaker_ir(
-                &coordinate_slice,
-                trimmed_input,
-            );
-            return ContractEvaluationReceipt {
-                dispatch_allowed: false,
-                overall_compliance: 0.0,
+        if let Some(lockdown_spec) = Self::resolve_lockdown_spec(
+            trimmed_input,
+            &coordinate_slice,
+            transpiled.circuit_breaker_triggered,
+        ) {
+            return Self::build_lockdown_receipt(
+                lockdown_spec,
                 branches,
                 quick_fixes,
-                contract_spec: Some(breaker_spec.clone()),
-                diagnostic_spec: Some(breaker_spec),
-                technical_action_summary: Some(transpiled.technical_action_summary),
-            };
+                transpiled.technical_action_summary,
+            );
         }
 
         let contract = Self::synthesize_contract(coordinate_slice.into(), trimmed_input, directive);
@@ -111,7 +97,7 @@ impl InvariantContractEvaluator {
 
         ContractEvaluationReceipt {
             dispatch_allowed: true,
-            overall_compliance: average_compliance,
+            satisfied_branch_ratio,
             branches,
             quick_fixes,
             contract_spec,
@@ -120,12 +106,73 @@ impl InvariantContractEvaluator {
         }
     }
 
-    #[inline]
-    pub fn simulate_superposition(
-        lexical_intent: &str,
-        directive: &AntiSpaghettiDirective,
+    /// Returns the specification that must replace ordinary compilation when the
+    /// request may not proceed as stated: a repeated-failure loop, or an operation
+    /// whose effect cannot be undone by a later edit.
+    fn resolve_lockdown_spec(
+        trimmed_input: &str,
+        coordinate_slice: &str,
+        circuit_breaker_triggered: bool,
+    ) -> Option<String> {
+        if circuit_breaker_triggered {
+            return Some(
+                super::formal_contract::HoareContract::render_circuit_breaker_ir(
+                    coordinate_slice,
+                    trimmed_input,
+                ),
+            );
+        }
+
+        let irreversible_trigger = Self::detect_irreversible_mutation(trimmed_input)?;
+        Some(
+            super::formal_contract::HoareContract::render_blast_radius_lockdown_ir(
+                coordinate_slice,
+                irreversible_trigger,
+            ),
+        )
+    }
+
+    fn build_lockdown_receipt(
+        lockdown_spec: String,
+        branches: Vec<InvariantBranchResult>,
+        quick_fixes: Vec<QuickFixAction>,
+        technical_action_summary: String,
     ) -> ContractEvaluationReceipt {
-        Self::evaluate(lexical_intent, directive)
+        ContractEvaluationReceipt {
+            dispatch_allowed: false,
+            satisfied_branch_ratio: 0.0,
+            branches,
+            quick_fixes,
+            contract_spec: Some(lockdown_spec.clone()),
+            diagnostic_spec: Some(lockdown_spec),
+            technical_action_summary: Some(technical_action_summary),
+        }
+    }
+
+    /// Detects requests whose effect cannot be undone by a subsequent edit —
+    /// dropped tables, wiped migrations, force-pushed history — so the compiled
+    /// contract can demand an explicit blast radius before any such action runs.
+    fn detect_irreversible_mutation(lexical_intent: &str) -> Option<&'static str> {
+        let lowered = lexical_intent.to_lowercase();
+        let irreversible_signatures = [
+            ("drop table", "SQL table destruction"),
+            ("drop the", "SQL object destruction"),
+            ("truncate table", "SQL table truncation"),
+            ("delete from", "unbounded row deletion"),
+            ("rm -rf", "recursive filesystem deletion"),
+            ("force push", "git history rewrite"),
+            ("force-push", "git history rewrite"),
+            ("git push -f", "git history rewrite"),
+            ("git reset --hard", "uncommitted work discard"),
+            ("reset --hard", "uncommitted work discard"),
+            ("ลบทั้งหมด", "bulk deletion request"),
+            ("ล้างข้อมูล", "data wipe request"),
+        ];
+
+        irreversible_signatures
+            .iter()
+            .find(|(signature, _)| lowered.contains(signature))
+            .map(|(_, classification)| *classification)
     }
 
     fn resolve_target_coordinate(target_candidate: Option<String>, trimmed_input: &str) -> String {
@@ -156,13 +203,11 @@ impl InvariantContractEvaluator {
             Some(coord) => InvariantBranchResult {
                 branch_identifier: "ALPHA_COORDINATE_SOUNDNESS".into(),
                 passed: true,
-                compliance_score: 1.0,
                 diagnostic_message: format!("Target coordinate anchored: {}", coord),
             },
             None => InvariantBranchResult {
                 branch_identifier: "ALPHA_COORDINATE_SOUNDNESS".into(),
                 passed: true,
-                compliance_score: 0.95,
                 diagnostic_message:
                     "Target scope: Domain-anchored (Agent auto-discovers candidate files).".into(),
             },
@@ -177,7 +222,6 @@ impl InvariantContractEvaluator {
             .any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t');
 
         let passed = !is_empty && !has_control_chars;
-        let compliance_score = if passed { 1.0 } else { 0.0 };
 
         let diagnostic_message = if !passed {
             "Prompt input failed semantic consistency checks (empty or corrupt tokens).".into()
@@ -188,7 +232,6 @@ impl InvariantContractEvaluator {
         InvariantBranchResult {
             branch_identifier: "BETA_TRANSITION_CONSISTENCY".into(),
             passed,
-            compliance_score,
             diagnostic_message,
         }
     }
@@ -204,7 +247,6 @@ impl InvariantContractEvaluator {
         InvariantBranchResult {
             branch_identifier: "GAMMA_INVARIANT_BUDGET".into(),
             passed,
-            compliance_score: if passed { 1.0 } else { 0.8 },
             diagnostic_message:
                 "Invariants enforced: CC <= 7, MaxSpan <= 70, Generic Identifiers Banned.".into(),
         }
@@ -216,7 +258,6 @@ impl InvariantContractEvaluator {
         InvariantBranchResult {
             branch_identifier: "DELTA_ARCHITECTURAL_CONTAINMENT".into(),
             passed: true,
-            compliance_score: if mentions_junk_drawer { 0.9 } else { 1.0 },
             diagnostic_message: if mentions_junk_drawer {
                 "Containment guidance: Redirecting logic away from utils/ or helpers/ junk drawers."
                     .into()
@@ -233,24 +274,18 @@ impl InvariantContractEvaluator {
             action_identifier: "qf_explicit_file".into(),
             display_label: "ระบุพิกัดไฟล์เจาะจง (e.g. In path/to/file.ext)".into(),
             replacement_target: format!("In file <target_file>: {}", input),
-            action_payload: format!("In file <target_file>: {}", input),
         });
 
         fixes.push(QuickFixAction {
             action_identifier: "qf_domain_scope".into(),
             display_label: "ใช้ Domain Scope (ให้ AI ค้นหาสัญลักษณ์ผ่าน LSP/MCP)".into(),
             replacement_target: format!("Domain(About: {})", input),
-            action_payload: format!("Domain(About: {})", input),
         });
 
         fixes.push(QuickFixAction {
             action_identifier: "qf_ascii_blueprint".into(),
             display_label: "บังคับสร้างพิมพ์เขียว ASCII ก่อนเขียนโค้ด".into(),
             replacement_target: format!(
-                "{}\n[INVARIANT: Render explicit ASCII component wireframe before writing code]",
-                input
-            ),
-            action_payload: format!(
                 "{}\n[INVARIANT: Render explicit ASCII component wireframe before writing code]",
                 input
             ),
@@ -308,5 +343,33 @@ impl InvariantContractEvaluator {
             input.into(),
             assertions,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_irreversible_request_is_held_for_blast_radius() {
+        let receipt = InvariantContractEvaluator::evaluate(
+            "drop the users table and rewrite everything",
+            &AntiSpaghettiDirective::default(),
+        );
+        assert!(!receipt.dispatch_allowed);
+        let spec = receipt
+            .diagnostic_spec
+            .expect("an irreversible request must carry a lockdown spec");
+        assert!(spec.contains("BLAST_RADIUS_LOCKDOWN"));
+        assert!(spec.contains("IRREVERSIBLE_MUTATION_HELD"));
+    }
+
+    #[test]
+    fn test_ordinary_request_is_not_held() {
+        let receipt = InvariantContractEvaluator::evaluate(
+            "add a helper that formats a price in thai baht",
+            &AntiSpaghettiDirective::default(),
+        );
+        assert!(receipt.dispatch_allowed);
     }
 }

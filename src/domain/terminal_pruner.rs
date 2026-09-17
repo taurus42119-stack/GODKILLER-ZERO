@@ -702,6 +702,9 @@ impl TerminalPruner {
 
     #[must_use]
     pub fn prune(raw_output: &str) -> PruneResult {
+        // A log saved by a Windows editor opens with a byte-order mark, which would
+        // otherwise anchor away the timestamp and noise patterns on the first line.
+        let raw_output = raw_output.trim_start_matches('\u{feff}');
         let stripped_ansi = Self::strip_ansi_escapes(raw_output);
         let progress_cleaned = PROGRESS_BAR_PATTERN
             .replace_all(&stripped_ansi, "")

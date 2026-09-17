@@ -1,5 +1,5 @@
 # GODKILLER ZERO - Enterprise One-Liner PowerShell Installer
-# Usage: irm https://raw.githubusercontent.com/taurus42119-stack/godkiller-zero/main/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/taurus42119-stack/GODKILLER-ZERO/main/install.ps1 | iex
 
 $ErrorActionPreference = "Stop"
 
@@ -25,11 +25,11 @@ if (Test-Path $CurrentGui) {
 
 if (-not (Test-Path $ExePath)) {
     Write-Host "Downloading latest release binary from GitHub..." -ForegroundColor Yellow
-    $DownloadUrl = "https://github.com/taurus42119-stack/godkiller-zero/releases/latest/download/godkiller-zero-windows-x86_64.zip"
+    $DownloadUrl = "https://github.com/taurus42119-stack/GODKILLER-ZERO/releases/latest/download/godkiller-zero-windows-x86_64.zip"
     $ZipPath = "$env:TEMP\godkiller-zero.zip"
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
 
-    $ChecksumUrl = "https://github.com/taurus42119-stack/godkiller-zero/releases/latest/download/SHA256SUMS.txt"
+    $ChecksumUrl = "https://github.com/taurus42119-stack/GODKILLER-ZERO/releases/latest/download/SHA256SUMS.txt"
     try {
         $ExpectedContent = (Invoke-WebRequest -Uri $ChecksumUrl -UseBasicParsing).Content.Trim()
         $ExpectedHash = ($ExpectedContent -split '\s+')[0].Trim().ToUpper()

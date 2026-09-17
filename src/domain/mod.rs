@@ -15,10 +15,8 @@ pub mod zero_bridge;
 pub use anti_spaghetti::{AntiSpaghettiDirective, AntiSpaghettiGuard};
 pub use ast_discovery::{AstDiscoveryEngine, ClarifierOption, DiscoveredCoordinate};
 pub use ast_engine::{AstAnalysisReport, AstEngine, AstFunctionMetrics};
-pub use contract_evaluator as quantum_simulator;
 pub use contract_evaluator::{
-    ContractEvaluationReceipt, InvariantBranchResult, InvariantContractEvaluator,
-    QuantumBranchState, QuantumSimulationReceipt, QuantumSuperpositionSimulator, QuickFixAction,
+    ContractEvaluationReceipt, InvariantBranchResult, InvariantContractEvaluator, QuickFixAction,
 };
 pub use formal_contract::HoareContract;
 pub use gatekeeper::{GatekeeperAuditResult, GatekeeperScanner, GatekeeperViolation};
@@ -27,8 +25,5 @@ pub use repo_map::{RepoMapGenerator, RepoMapReport};
 pub use stack_sensor::{ProjectStackContext, UniversalStackSensor};
 pub use symbol_graph::{BlastRadiusAnalysis, PerProjectSymbolGraph, SymbolNode};
 pub use terminal_pruner::{PruneResult, TerminalOutputCategory, TerminalPruner};
-pub use tri_pillar::{
-    ConstraintBoundary, DefectGoalDescription, IngressEvaluationVerdict, TargetCoordinate,
-    TriPillarEvaluator,
-};
+pub use tri_pillar::{IngressEvaluationVerdict, TriPillarEvaluator};
 pub use zero_bridge::ZeroBridge;

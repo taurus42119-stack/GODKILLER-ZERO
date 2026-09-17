@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveredCoordinate {
     pub file_path: String,
-    pub match_confidence: f32,
+    pub name_match_strength: f32,
     pub symbol_hint: Option<String>,
 }
 
@@ -45,8 +45,8 @@ impl AstDiscoveryEngine {
 
         discovered.sort_by(|left, right| {
             right
-                .match_confidence
-                .partial_cmp(&left.match_confidence)
+                .name_match_strength
+                .partial_cmp(&left.name_match_strength)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         discovered.truncate(3);
@@ -100,7 +100,7 @@ impl AstDiscoveryEngine {
         if match_score > 0.4 {
             Some(DiscoveredCoordinate {
                 file_path: path_str,
-                match_confidence: match_score.min(1.0),
+                name_match_strength: match_score.min(1.0),
                 symbol_hint: Some(file_name.to_string()),
             })
         } else {

@@ -41,4 +41,16 @@ Thumbs.db
 SHA256SUMS.txt
 dist/
 node_modules/
+.venv/
+GK0-BETA/
 GODKILLER ZERO (BETA)/
+
+# Not for public source tree (keep local if you want)
+tests/
+SPECIFICATION.md
+CONTRIBUTING.md
+SECURITY.md
+SECURITY_CHECKLIST.md
+feature_audit.md
+setup_local_llm.ps1
+.github/workflows/godkiller-gate.template.yml

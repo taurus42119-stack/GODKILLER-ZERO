@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function openRulesInspector() {
     if (!rulesModal) return;
     rulesModal.style.display = 'flex';
-    if (rulesModalContent) rulesModalContent.textContent = 'Loading active invariant rules from ~/.gemini/GEMINI.md...';
+    if (rulesModalContent) rulesModalContent.textContent = 'Loading active invariant rules from discovered IDE files...';
     try {
       const response = await fetch('/api/rules/inspect');
       if (response.ok) {
@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (response.ok) {
         const receipt = await response.json();
-        const compiledContract = receipt.dense_ir || receipt.compiled_ir;
+        const compiledContract = receipt.dense_ir;
 
         // Clarifier Chips
         if (receipt.clarifiers && receipt.clarifiers.length > 0 && clarifierChips && clarifierSection) {

@@ -367,7 +367,7 @@ fn build_advanced_guidance_rules(rules: &InvariantRulesSelection) -> String {
         ""
     };
     let repo_map_rule = if rules.repo_map {
-        "\n17. CODEBASE REPO MAP RADAR:\n    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context."
+        "\n17. CODEBASE REPO MAP RADAR:\n    - Invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context."
     } else {
         ""
     };
@@ -525,11 +525,13 @@ pub fn is_antigravity_hooked() -> bool {
     if query_antigravity_hook_state().hooked {
         return true;
     }
-    discover_additional_ide_target_paths().iter().any(|p| {
-        fs::read_to_string(p)
-            .map(|content| content.contains(GK_ZERO_MARKER_START))
-            .unwrap_or(false)
-    })
+    crate::antigravity::discover_live_rule_sinks()
+        .iter()
+        .any(|p| {
+            fs::read_to_string(p)
+                .map(|content| content.contains(GK_ZERO_MARKER_START))
+                .unwrap_or(false)
+        })
 }
 
 pub fn query_antigravity_hook_state() -> HookStateDetails {
@@ -618,38 +620,8 @@ fn merge_hook_corpus(persisted: &str, new_block: &str) -> String {
     }
 }
 
-fn push_if_exists(paths: &mut Vec<PathBuf>, candidate: PathBuf) {
-    if candidate.exists() {
-        paths.push(candidate);
-    }
-}
-
-fn push_home_ide_paths(paths: &mut Vec<PathBuf>) {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .map(PathBuf::from)
-        .ok();
-
-    let Some(home_dir) = home else {
-        return;
-    };
-
-    push_if_exists(paths, home_dir.join(".cursorrules"));
-    push_if_exists(paths, home_dir.join(".claude").join("CLAUDE.md"));
-}
-
 fn discover_additional_ide_target_paths() -> Vec<PathBuf> {
-    let mut paths = Vec::new();
-    push_home_ide_paths(&mut paths);
-
-    push_if_exists(&mut paths, PathBuf::from(".cursorrules"));
-    push_if_exists(&mut paths, PathBuf::from("CLAUDE.md"));
-    push_if_exists(
-        &mut paths,
-        PathBuf::from(".github").join("copilot-instructions.md"),
-    );
-
-    paths
+    crate::antigravity::discover_live_rule_sinks()
 }
 
 fn write_hook_to_file(target_file: &Path, manifest: &str) -> Result<(), String> {
@@ -670,8 +642,23 @@ fn write_hook_to_file(target_file: &Path, manifest: &str) -> Result<(), String> 
     };
 
     let synthesized = merge_hook_corpus(&persisted, manifest);
+    let synthesized = apply_mdc_envelope(target_file, &synthesized);
     fs::write(target_file, synthesized)
         .map_err(|e| format!("Failed to write to {}: {}", target_file.display(), e))
+}
+
+fn apply_mdc_envelope(target_file: &Path, body: &str) -> String {
+    let is_mdc = target_file
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("mdc"));
+    if !is_mdc || body.trim_start().starts_with("---") {
+        return body.to_string();
+    }
+    format!(
+        "---\ndescription: GODKILLER ZERO cognitive invariants\nalwaysApply: true\n---\n\n{}",
+        body.trim_start()
+    )
 }
 
 fn remove_hook_from_file(target_file: &Path) -> Result<bool, String> {
@@ -732,6 +719,9 @@ pub fn unhook_antigravity() -> Result<AntigravityHookResult, String> {
 
     for additional_path in discover_additional_ide_target_paths() {
         let _ = remove_hook_from_file(&additional_path);
+    }
+    for legacy_path in crate::antigravity::discover_live_legacy_cleanup_paths() {
+        let _ = remove_hook_from_file(&legacy_path);
     }
 
     Ok(AntigravityHookResult {

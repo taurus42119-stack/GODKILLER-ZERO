@@ -81,6 +81,17 @@ impl<'a> HoareContract<'a> {
     }
 
     #[must_use]
+    pub fn render_blast_radius_lockdown_ir(
+        target_coordinate: &str,
+        irreversible_classification: &str,
+    ) -> String {
+        format!(
+            "[GK0:BLAST_RADIUS_LOCKDOWN]\nTARGET: {}\nSTATUS: IRREVERSIBLE_MUTATION_HELD\nCLASSIFICATION: {}\nMANDATORY_INVARIANTS: Strictly FORBIDDEN from executing the destructive operation in this turn. MUST first enumerate every table, file, branch, or record inside the blast radius, state the rollback path, and obtain explicit user confirmation of that enumeration.",
+            target_coordinate, irreversible_classification
+        )
+    }
+
+    #[must_use]
     pub fn render_negation_dense_ir(
         target_coordinate: &str,
         technical_action: &str,

@@ -105,16 +105,55 @@ impl PerProjectSymbolGraph {
             .replace('\\', "/");
 
         for (line_index, raw_line) in content_text.lines().enumerate() {
-            let line_slice = raw_line.trim();
-            if let Some((name_slice, kind_slice)) = Self::parse_declaration_signature(line_slice) {
-                symbols_collector.push(SymbolNode {
-                    symbol_name: name_slice.to_string(),
-                    relative_path: relative_path.clone(),
-                    line_number: line_index + 1,
-                    symbol_kind: kind_slice.to_string(),
-                });
+            if !Self::is_declaration_scope(raw_line) {
+                continue;
             }
+            let line_slice = raw_line.trim();
+            let Some((name_slice, kind_slice)) = Self::parse_declaration_signature(line_slice)
+            else {
+                continue;
+            };
+            if Self::is_map_noise(name_slice, kind_slice, raw_line) {
+                continue;
+            }
+            symbols_collector.push(SymbolNode {
+                symbol_name: name_slice.to_string(),
+                relative_path: relative_path.clone(),
+                line_number: line_index + 1,
+                symbol_kind: kind_slice.to_string(),
+            });
         }
+    }
+
+    /// A map describes a file's interface, so only declarations at file scope or one
+    /// level inside a type body qualify. Anything deeper is a local binding whose
+    /// name means nothing to a reader who has not opened the function.
+    fn is_declaration_scope(raw_line: &str) -> bool {
+        let indent_width = raw_line
+            .chars()
+            .take_while(|character| character.is_whitespace())
+            .map(|character| if character == '\t' { 4 } else { 1 })
+            .sum::<usize>();
+        indent_width <= 8
+    }
+
+    /// Filters declarations that add length without adding orientation: test
+    /// scaffolding, and local constants that merely alias a DOM node or literal.
+    fn is_map_noise(symbol_name: &str, symbol_kind: &str, raw_line: &str) -> bool {
+        if symbol_name.starts_with("test_") {
+            return true;
+        }
+        if symbol_kind != "Constant/Component" {
+            return false;
+        }
+        let names_a_module_constant = symbol_name.chars().all(|character| {
+            character.is_ascii_uppercase() || character.is_ascii_digit() || character == '_'
+        });
+        let declares_a_component = raw_line.contains("=>")
+            || raw_line.contains("function")
+            || raw_line.contains("React")
+            || raw_line.contains("styled");
+        !names_a_module_constant && !declares_a_component
     }
 
     fn strip_declaration_modifiers(mut current: &str) -> (&str, bool) {
@@ -326,5 +365,43 @@ mod tests {
             "export type SecurityRole = string;",
         );
         assert_eq!(parsed_type, Some(("SecurityRole", "Type")));
+    }
+
+    #[test]
+    fn test_dom_alias_constants_are_treated_as_noise() {
+        assert!(PerProjectSymbolGraph::is_map_noise(
+            "btnOpenExtra",
+            "Constant/Component",
+            "const btnOpenExtra = document.getElementById('btn-open-extra');"
+        ));
+        assert!(PerProjectSymbolGraph::is_map_noise(
+            "test_harvest_symbols",
+            "Function",
+            "fn test_harvest_symbols() {"
+        ));
+    }
+
+    #[test]
+    fn test_module_constants_and_components_survive() {
+        assert!(!PerProjectSymbolGraph::is_map_noise(
+            "GK_ZERO_MARKER_START",
+            "Constant/Component",
+            "const GK_ZERO_MARKER_START: &str = \"<!-- gk -->\";"
+        ));
+        assert!(!PerProjectSymbolGraph::is_map_noise(
+            "showToast",
+            "Constant/Component",
+            "const showToast = (message) => {"
+        ));
+    }
+
+    #[test]
+    fn test_bindings_nested_deep_inside_a_body_are_out_of_scope() {
+        assert!(!PerProjectSymbolGraph::is_declaration_scope(
+            "                const deeplyNestedBinding = 1;"
+        ));
+        assert!(PerProjectSymbolGraph::is_declaration_scope(
+            "    pub fn public_method_on_impl() {"
+        ));
     }
 }

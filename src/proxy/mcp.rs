@@ -44,19 +44,45 @@ impl McpServer {
     }
 
     fn handle_request(request: &Value) -> Option<Value> {
-        let id = request.get("id")?;
         let method = request.get("method")?.as_str()?;
+        // JSON-RPC notifications have no id — never reply.
+        let Some(id) = request.get("id") else {
+            return None;
+        };
 
         match method {
             "initialize" => Some(Self::handle_initialize(id)),
             "tools/list" => Some(Self::handle_tools_list(id)),
             "tools/call" => Some(Self::handle_tools_call(id, request.get("params"))),
+            "prompts/list" => Some(json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": { "prompts": [] }
+            })),
+            "resources/list" => Some(json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": { "resources": [] }
+            })),
+            "resources/templates/list" => Some(json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": { "resourceTemplates": [] }
+            })),
             "ping" => Some(json!({
                 "jsonrpc": "2.0",
                 "id": id,
                 "result": {}
             })),
-            _ => None,
+            // Never silent-drop a request with an id — clients (Antigravity) hang on refresh.
+            _ => Some(json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "error": {
+                    "code": -32601,
+                    "message": format!("Method not found: {method}")
+                }
+            })),
         }
     }
 
@@ -162,11 +188,62 @@ impl McpServer {
         }
     }
 
+    /// Resolves a caller-supplied path argument. A missing or non-existent path
+    /// is rejected instead of silently falling back to the server's own working
+    /// directory, which would let a caller obtain a verification verdict for a
+    /// tree it never named.
+    fn resolve_required_path<'a>(
+        arguments: &'a Value,
+        argument_key: &str,
+    ) -> Result<&'a str, String> {
+        let supplied = arguments
+            .get(argument_key)
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .unwrap_or_default();
+
+        if supplied.is_empty() {
+            return Err(format!(
+                "Missing required argument '{}'. Supply an absolute path to the target project root.",
+                argument_key
+            ));
+        }
+        if !Path::new(supplied).exists() {
+            return Err(format!(
+                "Path '{}' does not exist on disk. Verification cannot be granted for an unresolvable target.",
+                supplied
+            ));
+        }
+        Ok(supplied)
+    }
+
+    fn invalid_arguments_response(id: &Value, message: &str) -> Value {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "error": {
+                "code": -32602,
+                "message": message
+            }
+        })
+    }
+
     fn handle_get_repo_map(id: &Value, arguments: &Value) -> Value {
         let workspace_path = arguments
             .get("workspace_path")
             .and_then(|p| p.as_str())
+            .map(str::trim)
+            .filter(|candidate| !candidate.is_empty())
             .unwrap_or(".");
+        if !Path::new(workspace_path).exists() {
+            return Self::invalid_arguments_response(
+                id,
+                &format!(
+                    "Workspace path '{}' does not exist on disk.",
+                    workspace_path
+                ),
+            );
+        }
         let max_tokens = arguments
             .get("max_tokens")
             .and_then(|t| t.as_u64())
@@ -189,12 +266,21 @@ impl McpServer {
     }
 
     fn handle_claim_done(id: &Value, arguments: &Value) -> Value {
-        let workspace_path = arguments
-            .get("workspace_path")
-            .and_then(|p| p.as_str())
-            .unwrap_or(".");
+        let workspace_path = match Self::resolve_required_path(arguments, "workspace_path") {
+            Ok(resolved) => resolved,
+            Err(rejection) => return Self::invalid_arguments_response(id, &rejection),
+        };
 
         let audit = GatekeeperScanner::scan_path(Path::new(workspace_path), 70, 7);
+        if audit.total_files_scanned == 0 {
+            return Self::invalid_arguments_response(
+                id,
+                &format!(
+                    "No auditable source files found under '{}'. Completion cannot be claimed against an unverified tree.",
+                    workspace_path
+                ),
+            );
+        }
         if audit.passed {
             json!({
                 "jsonrpc": "2.0",
@@ -245,10 +331,10 @@ impl McpServer {
     }
 
     fn handle_gatekeeper_scan(id: &Value, arguments: &Value) -> Value {
-        let target_path = arguments
-            .get("path")
-            .and_then(|p| p.as_str())
-            .unwrap_or(".");
+        let target_path = match Self::resolve_required_path(arguments, "path") {
+            Ok(resolved) => resolved,
+            Err(rejection) => return Self::invalid_arguments_response(id, &rejection),
+        };
 
         let audit = GatekeeperScanner::scan_path(Path::new(target_path), 70, 7);
         let summary = if audit.passed {
@@ -287,5 +373,85 @@ impl McpServer {
                 ]
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn call_tool(tool_name: &str, arguments: Value) -> Value {
+        McpServer::handle_tools_call(
+            &json!(1),
+            Some(&json!({ "name": tool_name, "arguments": arguments })),
+        )
+    }
+
+    #[test]
+    fn test_claim_done_rejects_missing_workspace_path() {
+        let response = call_tool("gk_claim_done", json!({ "completion_summary": "all done" }));
+        assert!(
+            response.get("error").is_some(),
+            "an unnamed target must not receive a completion verdict: {response}"
+        );
+        assert!(response.get("result").is_none());
+    }
+
+    #[test]
+    fn test_claim_done_rejects_nonexistent_workspace_path() {
+        let response = call_tool(
+            "gk_claim_done",
+            json!({ "workspace_path": "Z:/definitely/not/here" }),
+        );
+        assert_eq!(response["error"]["code"], -32602);
+    }
+
+    #[test]
+    fn test_gatekeeper_scan_rejects_missing_path() {
+        let response = call_tool("gk_gatekeeper_scan", json!({}));
+        assert_eq!(response["error"]["code"], -32602);
+    }
+
+    #[test]
+    fn test_prompts_list_returns_empty_array() {
+        let response = McpServer::handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "prompts/list"
+        }))
+        .expect("prompts/list must reply");
+        assert!(response.get("error").is_none(), "{response}");
+        assert_eq!(response["result"]["prompts"], json!([]));
+    }
+
+    #[test]
+    fn test_resources_list_returns_empty_array() {
+        let response = McpServer::handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "resources/list"
+        }))
+        .expect("resources/list must reply");
+        assert_eq!(response["result"]["resources"], json!([]));
+    }
+
+    #[test]
+    fn test_unknown_method_returns_error_instead_of_silence() {
+        let response = McpServer::handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "does/not/exist"
+        }))
+        .expect("unknown methods with id must reply");
+        assert_eq!(response["error"]["code"], -32601);
+    }
+
+    #[test]
+    fn test_notification_without_id_is_ignored() {
+        let response = McpServer::handle_request(&json!({
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized"
+        }));
+        assert!(response.is_none());
     }
 }

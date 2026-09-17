@@ -47,6 +47,9 @@ public enum TargetEngine
 
 public static class HookEngine
 {
+    // Antigravity (Go) rejects UTF-8 BOM in mcp_config.json — never emit the identifier.
+    private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
     public const string MarkerStart = "<!-- godkiller-zero:start -->";
     public const string MarkerEnd = "<!-- godkiller-zero:end -->";
 
@@ -145,7 +148,6 @@ public static class HookEngine
     public static System.Collections.Generic.List<string> GetTargetPaths(TargetEngine target)
     {
         var paths = new System.Collections.Generic.List<string>();
-        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string currentDir = Directory.GetCurrentDirectory();
 
         if (target == TargetEngine.Universal || target == TargetEngine.Antigravity)
@@ -158,35 +160,17 @@ public static class HookEngine
             }
         }
 
-        if (target == TargetEngine.Universal || target == TargetEngine.Cursor)
+        var nativeSinks = DiscoverRuleSinks(BuildLiveSinkRoots());
+        foreach (var sink in nativeSinks)
         {
-            paths.Add(Path.Combine(userProfile, ".cursorrules"));
-            string localCursor = Path.Combine(currentDir, ".cursorrules");
-            if (File.Exists(localCursor) || Directory.Exists(Path.Combine(currentDir, ".cursor")))
+            if (target == TargetEngine.Universal)
             {
-                paths.Add(localCursor);
+                paths.Add(sink);
+                continue;
             }
-        }
-
-        if (target == TargetEngine.Universal || target == TargetEngine.ClaudeCode)
-        {
-            string claudeHome = Path.Combine(userProfile, ".claude");
-            paths.Add(Path.Combine(claudeHome, "CLAUDE.md"));
-            string localClaude = Path.Combine(currentDir, "CLAUDE.md");
-            if (File.Exists(localClaude) || Directory.Exists(Path.Combine(currentDir, ".claude")))
-            {
-                paths.Add(localClaude);
-            }
-        }
-
-        if (target == TargetEngine.Universal || target == TargetEngine.VSCodeCopilot)
-        {
-            string githubDir = Path.Combine(currentDir, ".github");
-            string copilotPath = Path.Combine(githubDir, "copilot-instructions.md");
-            if (Directory.Exists(githubDir) || File.Exists(copilotPath) || Directory.Exists(Path.Combine(currentDir, ".git")))
-            {
-                paths.Add(copilotPath);
-            }
+            if (target == TargetEngine.Cursor && IsCursorSink(sink)) paths.Add(sink);
+            if (target == TargetEngine.ClaudeCode && IsClaudeSink(sink)) paths.Add(sink);
+            if (target == TargetEngine.VSCodeCopilot && IsCopilotSink(sink)) paths.Add(sink);
         }
 
         var unique = new System.Collections.Generic.List<string>();
@@ -196,6 +180,147 @@ public static class HookEngine
         }
         return unique;
     }
+
+    public class RuleSinkRoots
+    {
+        public string Home { get; set; } = "";
+        public string Workspace { get; set; } = "";
+        public string? XdgConfig { get; set; }
+        public System.Collections.Generic.List<string> ExtraCursorRoots { get; set; } = new();
+        public System.Collections.Generic.List<string> ExtraClaudeRoots { get; set; } = new();
+    }
+
+    public static RuleSinkRoots BuildLiveSinkRoots()
+    {
+        var roots = new RuleSinkRoots
+        {
+            Home = ResolveUserHome(),
+            Workspace = ResolveActiveWorkspaceRoot(),
+            XdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME")
+        };
+        AddEnvDir(roots.ExtraCursorRoots, "CURSOR_HOME");
+        AddEnvDir(roots.ExtraCursorRoots, "CURSOR_USER_DIR");
+        AddEnvDir(roots.ExtraClaudeRoots, "CLAUDE_CONFIG_DIR");
+        return roots;
+    }
+
+    public static System.Collections.Generic.List<string> DiscoverRuleSinks(RuleSinkRoots roots)
+    {
+        var paths = new System.Collections.Generic.List<string>();
+        CollectCursorSinks(paths, roots);
+        CollectClaudeSinks(paths, roots);
+        CollectCopilotSinks(paths, roots);
+        return DedupPaths(paths);
+    }
+
+    public static System.Collections.Generic.List<string> DiscoverLegacyCleanupPaths(RuleSinkRoots roots)
+    {
+        return new System.Collections.Generic.List<string>
+        {
+            Path.Combine(roots.Home, ".cursorrules"),
+            Path.Combine(roots.Workspace, ".cursorrules")
+        };
+    }
+
+    private static string ResolveUserHome()
+    {
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(profile)) return profile;
+        string? env = Environment.GetEnvironmentVariable("USERPROFILE")
+            ?? Environment.GetEnvironmentVariable("HOME");
+        return string.IsNullOrWhiteSpace(env) ? Directory.GetCurrentDirectory() : env;
+    }
+
+    private static void AddEnvDir(System.Collections.Generic.List<string> target, string key)
+    {
+        string? value = Environment.GetEnvironmentVariable(key);
+        if (!string.IsNullOrWhiteSpace(value)) target.Add(value);
+    }
+
+    private static void CollectCursorSinks(System.Collections.Generic.List<string> paths, RuleSinkRoots roots)
+    {
+        var hostDirs = new System.Collections.Generic.List<string>(roots.ExtraCursorRoots);
+        AddIfDir(hostDirs, Path.Combine(roots.Home, ".cursor"));
+        if (!string.IsNullOrWhiteSpace(roots.XdgConfig))
+        {
+            AddIfDir(hostDirs, Path.Combine(roots.XdgConfig, "cursor"));
+            AddIfDir(hostDirs, Path.Combine(roots.XdgConfig, "Cursor"));
+        }
+        AddIfDir(hostDirs, Path.Combine(roots.Workspace, ".cursor"));
+
+        foreach (var hostDir in hostDirs)
+        {
+            paths.Add(Path.Combine(hostDir, "rules", "godkiller-zero.mdc"));
+        }
+        if (hostDirs.Count > 0 && LooksLikeProjectRoot(roots.Workspace))
+        {
+            paths.Add(Path.Combine(roots.Workspace, ".cursor", "rules", "godkiller-zero.mdc"));
+        }
+    }
+
+    private static void CollectClaudeSinks(System.Collections.Generic.List<string> paths, RuleSinkRoots roots)
+    {
+        var hostDirs = new System.Collections.Generic.List<string>(roots.ExtraClaudeRoots);
+        AddIfDir(hostDirs, Path.Combine(roots.Home, ".claude"));
+        if (!string.IsNullOrWhiteSpace(roots.XdgConfig))
+        {
+            AddIfDir(hostDirs, Path.Combine(roots.XdgConfig, "claude"));
+        }
+        AddIfDir(hostDirs, Path.Combine(roots.Workspace, ".claude"));
+        foreach (var hostDir in hostDirs)
+        {
+            paths.Add(Path.Combine(hostDir, "CLAUDE.md"));
+        }
+        string workspaceClaude = Path.Combine(roots.Workspace, "CLAUDE.md");
+        if (File.Exists(workspaceClaude)) paths.Add(workspaceClaude);
+    }
+
+    private static void CollectCopilotSinks(System.Collections.Generic.List<string> paths, RuleSinkRoots roots)
+    {
+        string github = Path.Combine(roots.Workspace, ".github");
+        if (Directory.Exists(github)
+            || Directory.Exists(Path.Combine(roots.Workspace, ".git"))
+            || File.Exists(Path.Combine(roots.Workspace, ".git")))
+        {
+            paths.Add(Path.Combine(github, "copilot-instructions.md"));
+        }
+    }
+
+    private static bool LooksLikeProjectRoot(string dir)
+    {
+        return Directory.Exists(Path.Combine(dir, ".git"))
+            || File.Exists(Path.Combine(dir, ".git"))
+            || File.Exists(Path.Combine(dir, "Cargo.toml"))
+            || File.Exists(Path.Combine(dir, "package.json"))
+            || Directory.Exists(Path.Combine(dir, ".cursor"))
+            || Directory.Exists(Path.Combine(dir, ".gemini"))
+            || Directory.Exists(Path.Combine(dir, ".claude"))
+            || Directory.Exists(Path.Combine(dir, ".agents"));
+    }
+
+    private static void AddIfDir(System.Collections.Generic.List<string> dirs, string candidate)
+    {
+        if (Directory.Exists(candidate) && !dirs.Contains(candidate)) dirs.Add(candidate);
+    }
+
+    private static System.Collections.Generic.List<string> DedupPaths(System.Collections.Generic.List<string> paths)
+    {
+        var unique = new System.Collections.Generic.List<string>();
+        foreach (var p in paths)
+        {
+            if (!unique.Contains(p)) unique.Add(p);
+        }
+        return unique;
+    }
+
+    private static bool IsCursorSink(string path) =>
+        path.Replace('\\', '/').EndsWith(".cursor/rules/godkiller-zero.mdc", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsClaudeSink(string path) =>
+        Path.GetFileName(path).Equals("CLAUDE.md", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsCopilotSink(string path) =>
+        Path.GetFileName(path).Equals("copilot-instructions.md", StringComparison.OrdinalIgnoreCase);
 
     public static bool IsHooked(TargetEngine target = TargetEngine.Universal)
     {
@@ -396,39 +521,9 @@ public static class HookEngine
         // 1-Click Auto-Provision MCP config for Antigravity, Claude, and Cursor
         ProvisionMcpConfig(target);
 
-        // If RepoMap is enabled, trigger background scan to generate/update .gemini/REPO_MAP.md
-        if (options.RepoMap)
-        {
-            TriggerRepoMapGeneration();
-        }
-
+        // The map is served live through the MCP tool `gk_get_repo_map`, so there is
+        // no pre-generated file to keep in sync here.
         return anyOk;
-    }
-
-    public static void TriggerRepoMapGeneration()
-    {
-        try
-        {
-            string? daemonExe = FindDaemonExePath();
-            if (!string.IsNullOrEmpty(daemonExe) && File.Exists(daemonExe))
-            {
-                string workspace = ResolveActiveWorkspaceRoot();
-                var psi = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = daemonExe,
-                    Arguments = $"--repo-map \"{workspace}\"",
-                    WorkingDirectory = workspace,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
-                };
-                System.Diagnostics.Process.Start(psi);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"RepoMap generation error: {ex.Message}");
-        }
     }
 
     public static bool Unhook(TargetEngine target = TargetEngine.Universal)
@@ -437,6 +532,10 @@ public static class HookEngine
         KillBackgroundProcesses();
 
         var paths = GetTargetPaths(target);
+        foreach (var p in DiscoverLegacyCleanupPaths(BuildLiveSinkRoots()))
+        {
+            if (!paths.Contains(p)) paths.Add(p);
+        }
         bool allOk = true;
         foreach (var p in paths)
         {
@@ -460,18 +559,21 @@ public static class HookEngine
             try { _ = HttpClient.PostAsync("http://127.0.0.1:4242/api/quit", null); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
 
-            // Terminate any godkiller-zero processes in memory
-            var processes = System.Diagnostics.Process.GetProcessesByName("godkiller-zero");
-            foreach (var p in processes)
+            // Terminate ZERO daemons only — never touch other MCP host processes.
+            foreach (string processName in new[] { "godkiller-zero", "godkiller-console", "GodkillerZero" })
             {
-                try
+                var processes = System.Diagnostics.Process.GetProcessesByName(processName);
+                foreach (var p in processes)
                 {
-                    p.Kill(entireProcessTree: true);
-                    p.WaitForExit(500);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                    try
+                    {
+                        p.Kill(entireProcessTree: true);
+                        p.WaitForExit(500);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine(ex.Message);
+                    }
                 }
             }
         }
@@ -486,15 +588,22 @@ public static class HookEngine
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string currentDir = Directory.GetCurrentDirectory();
         string workspace = ResolveActiveWorkspaceRoot();
-        string[] binNames = { "godkiller-console.exe", "godkiller-zero.exe" };
-        string[] searchDirs = {
+        string[] binNames = { "godkiller-console.exe", "godkiller-zero.exe", "godkiller-console", "godkiller-zero" };
+        var searchDirs = new System.Collections.Generic.List<string>();
+        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(localAppData))
+        {
+            searchDirs.Add(Path.Combine(localAppData, "Programs", "godkiller-zero"));
+        }
+        searchDirs.AddRange(new[]
+        {
+            baseDir,
+            Path.Combine(baseDir, ".."),
+            Path.Combine(baseDir, "..", "publish"),
             Path.Combine(workspace, "publish"),
             Path.Combine(workspace, "target", "release"),
             Path.Combine(workspace, "target", "debug"),
             workspace,
-            baseDir,
-            Path.Combine(baseDir, ".."),
-            Path.Combine(baseDir, "..", "publish"),
             Path.Combine(baseDir, "..", "..", "..", "..", "publish"),
             Path.Combine(baseDir, "..", "..", "..", "..", "target", "release"),
             Path.Combine(baseDir, "..", "..", "..", "..", "target", "debug"),
@@ -502,7 +611,7 @@ public static class HookEngine
             Path.Combine(currentDir, "target", "release"),
             Path.Combine(currentDir, "target", "debug"),
             currentDir
-        };
+        });
 
         foreach (var name in binNames)
         {
@@ -553,6 +662,8 @@ public static class HookEngine
             targets.Add(Path.Combine(baseGemini, "config", "mcp_config.json"));
             targets.Add(Path.Combine(baseGemini, "mcp_config.json"));
             targets.Add(Path.Combine(baseGemini, "antigravity-ide", "mcp_config.json"));
+            targets.Add(Path.Combine(baseGemini, "antigravity", "mcp_config.json"));
+            targets.Add(Path.Combine(baseGemini, "antigravity", "mcp", "mcp_config.json"));
         }
 
         string agentsDir = Path.Combine(Directory.GetCurrentDirectory(), ".agents");
@@ -564,27 +675,63 @@ public static class HookEngine
         return targets;
     }
 
-    public static void ProvisionMcpConfig(TargetEngine target = TargetEngine.Universal)
+    public static System.Collections.Generic.List<string> GetMcpConfigTargets(TargetEngine target)
     {
-        string? daemonExe = FindDaemonExePath();
-        if (string.IsNullOrEmpty(daemonExe) || !File.Exists(daemonExe)) return;
-
         var mcpTargets = new System.Collections.Generic.List<string>();
-        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
         if (target == TargetEngine.Universal || target == TargetEngine.Antigravity)
         {
             mcpTargets.AddRange(ResolveAntigravityMcpTargets());
         }
         if (target == TargetEngine.Universal || target == TargetEngine.ClaudeCode)
         {
-            mcpTargets.Add(Path.Combine(appData, "Claude", "claude_desktop_config.json"));
+            mcpTargets.AddRange(ResolveClaudeDesktopMcpTargets());
         }
         if (target == TargetEngine.Universal || target == TargetEngine.Cursor)
         {
-            mcpTargets.Add(Path.Combine(userProfile, ".cursor", "mcp.json"));
+            mcpTargets.AddRange(ResolveCursorMcpTargets());
         }
+        return DedupPaths(mcpTargets);
+    }
+
+    private static System.Collections.Generic.List<string> ResolveClaudeDesktopMcpTargets()
+    {
+        var targets = new System.Collections.Generic.List<string>();
+        string home = ResolveUserHome();
+        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!string.IsNullOrWhiteSpace(appData))
+        {
+            targets.Add(Path.Combine(appData, "Claude", "claude_desktop_config.json"));
+        }
+        targets.Add(Path.Combine(home, "Library", "Application Support", "Claude", "claude_desktop_config.json"));
+        string? xdg = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        if (!string.IsNullOrWhiteSpace(xdg))
+        {
+            targets.Add(Path.Combine(xdg, "Claude", "claude_desktop_config.json"));
+        }
+        targets.Add(Path.Combine(home, ".config", "Claude", "claude_desktop_config.json"));
+        return targets;
+    }
+
+    private static System.Collections.Generic.List<string> ResolveCursorMcpTargets()
+    {
+        var targets = new System.Collections.Generic.List<string>
+        {
+            Path.Combine(ResolveUserHome(), ".cursor", "mcp.json")
+        };
+        string workspace = ResolveActiveWorkspaceRoot();
+        if (Directory.Exists(Path.Combine(workspace, ".cursor")))
+        {
+            targets.Add(Path.Combine(workspace, ".cursor", "mcp.json"));
+        }
+        return targets;
+    }
+
+    public static void ProvisionMcpConfig(TargetEngine target = TargetEngine.Universal)
+    {
+        string? daemonExe = FindDaemonExePath();
+        if (string.IsNullOrEmpty(daemonExe) || !File.Exists(daemonExe)) return;
+
+        var mcpTargets = GetMcpConfigTargets(target);
 
         foreach (var configPath in mcpTargets)
         {
@@ -594,24 +741,7 @@ public static class HookEngine
 
     public static void DeprovisionMcpConfig(TargetEngine target = TargetEngine.Universal)
     {
-        var mcpTargets = new System.Collections.Generic.List<string>();
-        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
-        if (target == TargetEngine.Universal || target == TargetEngine.Antigravity)
-        {
-            mcpTargets.AddRange(ResolveAntigravityMcpTargets());
-        }
-        if (target == TargetEngine.Universal || target == TargetEngine.ClaudeCode)
-        {
-            mcpTargets.Add(Path.Combine(appData, "Claude", "claude_desktop_config.json"));
-        }
-        if (target == TargetEngine.Universal || target == TargetEngine.Cursor)
-        {
-            mcpTargets.Add(Path.Combine(userProfile, ".cursor", "mcp.json"));
-        }
-
-        foreach (var configPath in mcpTargets)
+        foreach (var configPath in GetMcpConfigTargets(target))
         {
             SafeRemoveMcpServer(configPath);
         }
@@ -655,6 +785,13 @@ public static class HookEngine
         }
     }
 
+    private static readonly string[] GodkillerMcpServerNames =
+    {
+        "godkiller-zero",
+        "godkiller",
+        "godkiller-mcp"
+    };
+
     private static void SafeInjectMcpServer(string configPath, string daemonExe)
     {
         try
@@ -668,36 +805,54 @@ public static class HookEngine
             JsonObject rootNode;
             if (File.Exists(configPath))
             {
-                string jsonText = File.ReadAllText(configPath);
-                var parsed = JsonNode.Parse(jsonText);
-                rootNode = parsed as JsonObject ?? new JsonObject();
+                string jsonText = ReadJsonConfigText(configPath);
+                // Never replace a broken/non-object file with a godkiller-only config — that wipes peers.
+                if (JsonNode.Parse(jsonText) is not JsonObject existingRoot)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Refusing MCP inject at {configPath}: root JSON is not an object.");
+                    return;
+                }
+                rootNode = existingRoot;
             }
             else
             {
                 rootNode = new JsonObject();
             }
 
-            if (!rootNode.ContainsKey("mcpServers") || rootNode["mcpServers"] is not JsonObject)
+            if (rootNode["mcpServers"] is null)
             {
                 rootNode["mcpServers"] = new JsonObject();
             }
+            else if (rootNode["mcpServers"] is not JsonObject)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Refusing MCP inject at {configPath}: mcpServers is not an object.");
+                return;
+            }
 
             var servers = rootNode["mcpServers"]!.AsObject();
-            string mcpCommand = IsCommandInPath("godkiller-zero")
-                ? "godkiller-zero"
-                : (!string.IsNullOrEmpty(daemonExe) && File.Exists(daemonExe) ? Path.GetFullPath(daemonExe) : "godkiller-zero");
+            int peersBefore = CountPeerMcpServers(servers);
 
-            var godkillerServer = new JsonObject
+            string mcpCommand = ResolveMcpCommand(daemonExe);
+            servers["godkiller-zero"] = new JsonObject
             {
                 ["command"] = mcpCommand,
                 ["args"] = new JsonArray { "--mcp" }
             };
 
-            servers["godkiller-zero"] = godkillerServer;
+            // Drop legacy aliases so only one ZERO entry remains.
+            servers.Remove("godkiller");
+            servers.Remove("godkiller-mcp");
 
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            string outputJson = rootNode.ToJsonString(options);
-            File.WriteAllText(configPath, outputJson, Encoding.UTF8);
+            if (CountPeerMcpServers(servers) < peersBefore)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Refusing MCP inject at {configPath}: peer server count would drop.");
+                return;
+            }
+
+            WriteMcpConfigJson(configPath, rootNode);
         }
         catch (Exception ex)
         {
@@ -711,24 +866,91 @@ public static class HookEngine
         {
             if (!File.Exists(configPath)) return;
 
-            string jsonText = File.ReadAllText(configPath);
-            var parsed = JsonNode.Parse(jsonText);
-            if (parsed is not JsonObject rootNode) return;
+            string jsonText = ReadJsonConfigText(configPath);
+            if (JsonNode.Parse(jsonText) is not JsonObject rootNode) return;
+            if (rootNode["mcpServers"] is not JsonObject servers) return;
 
-            if (rootNode.ContainsKey("mcpServers") && rootNode["mcpServers"] is JsonObject servers)
+            int peersBefore = CountPeerMcpServers(servers);
+            bool removed = false;
+            foreach (string name in GodkillerMcpServerNames)
             {
-                if (servers.Remove("godkiller-zero"))
+                if (servers.Remove(name))
                 {
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    string outputJson = rootNode.ToJsonString(options);
-                    File.WriteAllText(configPath, outputJson, Encoding.UTF8);
+                    removed = true;
                 }
             }
+            if (!removed) return;
+
+            if (CountPeerMcpServers(servers) != peersBefore)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Refusing MCP deprovision at {configPath}: peer servers changed unexpectedly.");
+                return;
+            }
+
+            WriteMcpConfigJson(configPath, rootNode);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to deprovision MCP at {configPath}: {ex.Message}");
         }
+    }
+
+    private static int CountPeerMcpServers(JsonObject servers)
+    {
+        int count = 0;
+        foreach (var property in servers)
+        {
+            if (IsGodkillerMcpServerName(property.Key)) continue;
+            count++;
+        }
+        return count;
+    }
+
+    private static bool IsGodkillerMcpServerName(string name)
+    {
+        foreach (string candidate in GodkillerMcpServerNames)
+        {
+            if (name.Equals(candidate, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void WriteMcpConfigJson(string configPath, JsonObject rootNode)
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+        WriteUtf8NoBom(configPath, rootNode.ToJsonString(options));
+    }
+
+    private static string ReadJsonConfigText(string configPath)
+    {
+        string jsonText = File.ReadAllText(configPath);
+        return jsonText.Length > 0 && jsonText[0] == '\uFEFF'
+            ? jsonText.TrimStart('\uFEFF')
+            : jsonText;
+    }
+
+    private static void WriteUtf8NoBom(string path, string contents)
+    {
+        File.WriteAllText(path, contents, Utf8NoBom);
+    }
+
+    private static string ResolveMcpCommand(string daemonExe)
+    {
+        if (IsCommandInPath("godkiller-console")) return "godkiller-console";
+        if (IsCommandInPath("godkiller-zero")) return "godkiller-zero";
+        if (!string.IsNullOrEmpty(daemonExe) && File.Exists(daemonExe))
+        {
+            return Path.GetFullPath(daemonExe);
+        }
+        return "godkiller-console";
     }
 
     private static bool IsCommandInPath(string command)
@@ -737,10 +959,12 @@ public static class HookEngine
         {
             string? pathEnv = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrEmpty(pathEnv)) return false;
-            string exeName = command.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? command : command + ".exe";
             foreach (var dir in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
             {
-                if (File.Exists(Path.Combine(dir.Trim(), exeName)))
+                string trimmed = dir.Trim();
+                if (File.Exists(Path.Combine(trimmed, command))) return true;
+                if (!command.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(Path.Combine(trimmed, command + ".exe")))
                 {
                     return true;
                 }
@@ -825,14 +1049,28 @@ public static class HookEngine
             string updated = string.IsNullOrEmpty(cleaned)
                 ? ruleBlock + "\n"
                 : cleaned + "\n\n" + ruleBlock + "\n";
+            updated = ApplyMdcEnvelope(path, updated);
 
-            File.WriteAllText(path, updated, Encoding.UTF8);
+            WriteUtf8NoBom(path, updated);
             return true;
         }
         catch
         {
             return false;
         }
+    }
+
+    private static string ApplyMdcEnvelope(string path, string body)
+    {
+        if (!path.EndsWith(".mdc", StringComparison.OrdinalIgnoreCase))
+        {
+            return body;
+        }
+        if (body.TrimStart().StartsWith("---", StringComparison.Ordinal))
+        {
+            return body;
+        }
+        return "---\ndescription: GODKILLER ZERO cognitive invariants\nalwaysApply: true\n---\n\n" + body.TrimStart();
     }
 
     public static bool RemoveHookFromFilePath(string path)
@@ -871,7 +1109,7 @@ public static class HookEngine
             if (modified)
             {
                 string trimmed = text.Trim();
-                File.WriteAllText(path, string.IsNullOrEmpty(trimmed) ? string.Empty : trimmed + "\n", Encoding.UTF8);
+                WriteUtf8NoBom(path, string.IsNullOrEmpty(trimmed) ? string.Empty : trimmed + "\n");
             }
 
             return true;
@@ -1162,7 +1400,7 @@ public static class HookEngine
         if (options.RepoMap)
         {
             sb.AppendLine("17. CODEBASE REPO MAP RADAR:");
-            sb.AppendLine("    - Consult `.gemini/REPO_MAP.md` or invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context.");
+            sb.AppendLine("    - Invoke MCP tool `gk_get_repo_map` to locate symbols before reading files. Strictly avoid dumping files >150 lines into context.");
         }
 
         sb.Append(MarkerEnd);

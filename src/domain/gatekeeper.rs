@@ -831,6 +831,7 @@ impl GatekeeperScanner {
             || file_name == "obj"
             || file_name == "publish"
             || file_name.ends_with("(BETA)")
+            || file_name.eq_ignore_ascii_case("GK0-BETA")
     }
 
     fn process_walk_entry(

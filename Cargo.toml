@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["taurus42119 <https://github.com/taurus42119-stack>"]
 description = "Cognitive Pre-flight Firewall & Semantic IR Compiler for Google Antigravity & Coding Agents"
 license = "MIT"
-repository = "https://github.com/taurus42119-stack/godkiller-zero"
+repository = "https://github.com/taurus42119-stack/GODKILLER-ZERO"
 
 [lib]
 name = "godkiller_zero"
