@@ -46,9 +46,7 @@ impl McpServer {
     fn handle_request(request: &Value) -> Option<Value> {
         let method = request.get("method")?.as_str()?;
         // JSON-RPC notifications have no id — never reply.
-        let Some(id) = request.get("id") else {
-            return None;
-        };
+        let id = request.get("id")?;
 
         match method {
             "initialize" => Some(Self::handle_initialize(id)),
